@@ -22,7 +22,7 @@
       --shadow: 0 18px 48px rgba(24, 35, 61, 0.10);
       --radius: 8px;
       --max: 1180px;
-      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
       font-size: 16px;
     }
 
@@ -32,6 +32,10 @@
 
     html {
       scroll-behavior: smooth;
+    }
+
+    section[id] {
+      scroll-margin-top: 84px;
     }
 
     body {
@@ -106,7 +110,7 @@
 
     .nav-links a {
       color: #3c4043;
-      font-weight: 520;
+      font-weight: 600;
     }
 
     .shell {
@@ -180,7 +184,7 @@
       font-size: clamp(2.5rem, 6vw, 5.1rem);
       line-height: 0.98;
       letter-spacing: 0;
-      font-weight: 780;
+      font-weight: 800;
     }
 
     h2 {
@@ -189,7 +193,7 @@
       font-size: clamp(2rem, 3.6vw, 3.3rem);
       line-height: 1.08;
       letter-spacing: 0;
-      font-weight: 760;
+      font-weight: 700;
     }
 
     h3 {
@@ -227,7 +231,7 @@
 
     .meta b {
       color: #202124;
-      font-weight: 680;
+      font-weight: 700;
     }
 
     .hero-visual {
@@ -259,11 +263,12 @@
       background: #fff;
     }
 
-    .node h4 {
+    .node-title {
       margin: 0 0 8px;
       color: #202124;
       font-size: 1rem;
       line-height: 1.25;
+      font-weight: 700;
     }
 
     .node p {
@@ -635,6 +640,18 @@
       color: var(--muted);
     }
 
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     @media (max-width: 980px) {
       .article-layout {
         grid-template-columns: 1fr;
@@ -720,7 +737,7 @@
       <a class="brand" href="#top" aria-label="Builder Team QC home">
         <span class="mark" aria-hidden="true">
           <svg viewBox="0 0 48 48" fill="none" role="img">
-            <path d="M12 14h24v20H12z" stroke="#1a73e8" stroke-width="3" rx="3"></path>
+            <rect x="12" y="14" width="24" height="20" rx="3" stroke="#1a73e8" stroke-width="3"></rect>
             <path d="M18 22h12M18 28h7" stroke="#188038" stroke-width="3" stroke-linecap="round"></path>
             <path d="M35 10v8M35 30v8" stroke="#fbbc04" stroke-width="3" stroke-linecap="round"></path>
           </svg>
@@ -753,7 +770,7 @@
     <article>
       <p class="section-label">Developers and Practitioners</p>
       <h1>Building Collaborative Codex: A Developer's Guide to Builder-Team Multi-Agent Systems</h1>
-      <p class="lede">A practical guide to the `builder-team-qc` process: how Codex can coordinate builder, reviewer, test, compliance, integration, release, and Ponytail roles without handing control to remote services or hidden automation.</p>
+      <p class="lede">A practical guide to the <code>builder-team-qc</code> process: how Codex can coordinate builder, reviewer, test, compliance, integration, release, and Ponytail roles without handing control to remote services or hidden automation.</p>
 
       <div class="meta" aria-label="Article metadata">
         <span><b>Prepared for:</b> Workhorse Codex projects</span>
@@ -775,25 +792,26 @@
       </details>
 
       <section class="hero-visual" aria-label="Builder Team QC pipeline diagram">
+        <h2 class="visually-hidden">Builder Team QC phase flow</h2>
         <div class="pipeline">
           <div class="node">
-            <h4>phase-controller</h4>
+            <div class="node-title">phase-controller</div>
             <p>Reads the plan, opens the phase record, and owns the gate.</p>
           </div>
           <div class="node green">
-            <h4>builder-agent</h4>
+            <div class="node-title">builder-agent</div>
             <p>Implements the smallest correct phase change.</p>
           </div>
           <div class="node yellow">
-            <h4>ponytail-adapter</h4>
+            <div class="node-title">ponytail-adapter</div>
             <p>Checks scope, YAGNI, dependencies, and abstraction discipline.</p>
           </div>
           <div class="node violet">
-            <h4>evidence fan-out</h4>
+            <div class="node-title">evidence fan-out</div>
             <p>Review, tests, compliance, seams, and release checks join.</p>
           </div>
           <div class="node red">
-            <h4>strict gate</h4>
+            <div class="node-title">strict gate</div>
             <p>Pass, revise, block, or accepted risk. No proof, no pass.</p>
           </div>
           <div class="fanout" aria-label="Evidence checks">
@@ -810,7 +828,7 @@
       <section id="what">
         <h2>What is a builder-team multi-agent system?</h2>
         <p>A builder-team system is a structured way for Codex to run a build like a small engineering team. The point is not to create chaos with many agents talking at once. The point is to assign stable responsibilities, write evidence to disk, and make the phase gate inspectable after the chat is over.</p>
-        <p>In `builder-team-qc`, the phase is the unit of control. Each role sees the current phase through its own lens, writes a record, and hands control back to the phase controller.</p>
+        <p>In <code>builder-team-qc</code>, the phase is the unit of control. Each role sees the current phase through its own lens, writes a record, and hands control back to the phase controller.</p>
 
         <div class="three">
           <div class="card">
@@ -826,7 +844,7 @@
           <div class="card">
             <div class="stripe yellow"></div>
             <h3>Durable proof</h3>
-            <p>The `.qc/` folder records phase runs, tests, deviations, decisions, seam audits, Ponytail checks, and gate outcomes.</p>
+            <p>The <code>.qc/</code> folder records phase runs, tests, deviations, decisions, seam audits, Ponytail checks, and gate outcomes.</p>
           </div>
         </div>
       </section>
@@ -858,7 +876,7 @@
               <tr>
                 <td>Custom logic</td>
                 <td>Local scripts under <code>scripts/</code></td>
-                <td>Create `.qc`, start phase records, record events, validate gates, and summarize phase state.</td>
+                <td>Create <code>.qc</code>, start phase records, record events, validate gates, and summarize phase state.</td>
               </tr>
             </tbody>
           </table>
@@ -893,7 +911,7 @@
 
       <section id="orchestration">
         <h2>Orchestrating work with workflow patterns</h2>
-        <p>ADK uses Sequential, Parallel, and Loop agents. Builder Team QC uses the same orchestration ideas in a local file-backed way.</p>
+        <p>ADK uses Sequential, Parallel, and Loop agents. Builder Team QC uses the same orchestration ideas in a local file-backed way. In V01, fan-out is sequential role execution with a join point, not true concurrent runtime execution.</p>
 
         <div class="patterns">
           <div class="pattern">
@@ -912,6 +930,7 @@
           </div>
           <div class="pattern">
             <h3>Parallel-style checks</h3>
+            <p>Logical fan-out only: Codex applies these checks one at a time unless a future runtime adds real concurrency.</p>
             <div class="mini-flow">
               <span class="pillbox">test</span>
               <span class="pillbox">review</span>
@@ -924,6 +943,7 @@
           </div>
           <div class="pattern">
             <h3>Loop</h3>
+            <p>The revise loop is capped at three repeated failed attempts before the controller blocks and asks for a human decision.</p>
             <div class="mini-flow">
               <span class="pillbox">strict gate fails</span>
               <span>&rarr;</span>
@@ -936,12 +956,47 @@
           </div>
         </div>
 
-        <div class="quote">The controller can move fast, but it cannot skip proof. The build only advances when the current phase has durable evidence and a valid gate outcome.</div>
+        <div class="quote">The hard stop is the deterministic validator: <code>validate_phase_record.py --strict-gate</code> must exit cleanly for evidence completion. Model-authored role reports are useful review evidence, but executable checks and validator exit codes carry more weight.</div>
+
+        <h3>What is enforced by code?</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Gate condition</th>
+                <th>Checked by script</th>
+                <th>Judged by role review</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Ponytail event exists and latest verdict is <code>pass</code></td>
+                <td><code>validate_phase_record.py</code></td>
+                <td>Reviewer may assess whether the recorded rationale is credible.</td>
+              </tr>
+              <tr>
+                <td>Required test evidence exists and no recorded required test failed</td>
+                <td><code>validate_phase_record.py</code></td>
+                <td>Test role decides whether the selected checks are meaningful.</td>
+              </tr>
+              <tr>
+                <td>Required role files are present and no verdict remains pending</td>
+                <td><code>validate_phase_record.py --strict-gate</code></td>
+                <td>Role content quality still requires human/Codex judgment.</td>
+              </tr>
+              <tr>
+                <td>Architecture fit, maintainability, and self-review quality</td>
+                <td>Not fully deterministic in V01</td>
+                <td>Reviewer and compliance reports; executable checks should be preferred when available.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section id="state">
-        <h2>How agents communicate: `.qc` shared state</h2>
-        <p>ADK has shared session state. Builder Team QC uses a project-local `.qc/` folder. It is a durable whiteboard for phase state, role outputs, tests, deviations, accepted risks, and final gate decisions.</p>
+        <h2>How agents communicate: <code>.qc</code> shared state</h2>
+        <p>ADK has shared session state. Builder Team QC uses a project-local <code>.qc/</code> folder. It is a durable whiteboard for phase state, role outputs, tests, deviations, accepted risks, and final gate decisions.</p>
 
         <div class="state-grid">
           <div class="state"><strong><code>phase-board.json</code></strong><span>Current phase, status, next phase, required evidence, and latest gate.</span></div>
@@ -949,12 +1004,14 @@
           <div class="state"><strong><code>test-results/{phase-id}.jsonl</code></strong><span>Machine-readable test evidence with command, status, exit code, and notes.</span></div>
           <div class="state"><strong><code>ponytail-events.jsonl</code></strong><span>Ponytail mode, checks, and minimal-code verdict.</span></div>
           <div class="state"><strong><code>deviation-log.jsonl</code></strong><span>Scope changes, blockers, unresolved risk, and accepted-risk metadata.</span></div>
-          <div class="state"><strong><code>decision-log.jsonl</code></strong><span>User decisions, approvals, gate overrides, and follow-up commitments.</span></div>
+          <div class="state"><strong><code>decision-log.jsonl</code></strong><span>Human decisions, approvals, accepted-risk bypasses, and follow-up commitments.</span></div>
         </div>
+        <p><code>accepted_with_risk</code> is a gate bypass, not a controller convenience. It should require an explicit human decision recorded in <code>decision-log.jsonl</code>; the controller must not self-approve incomplete evidence.</p>
       </section>
 
       <section id="ponytail">
         <h2>Ponytail is a gate, not a test helper</h2>
+        <p>Ponytail is the project code name for the minimal-code discipline checklist used by Builder Team QC. In V01, it is an instruction/checklist adapter, not a trusted external runtime or autonomous hook system.</p>
         <p>The Ponytail adapter checks whether the builder output obeys the minimal-code discipline: YAGNI, standard library first, existing project tools before new dependencies, and no unnecessary abstraction. If it passes, the evidence checks fan out. If it revises or blocks, the controller should stop or loop back before spending time on deeper validation.</p>
 
         <div class="callout">
@@ -1007,7 +1064,7 @@
 
       <section id="run">
         <h2>How to run it</h2>
-        <p>Invoke the process from Codex with the target root, build plan, and current phase. Codex reads the plugin docs, initializes `.qc`, starts the phase record, applies roles, records evidence, and validates the strict gate.</p>
+        <p>Invoke the process from Codex with the target root, build plan, and current phase. Codex reads the plugin docs, initializes <code>.qc</code>, starts the phase record, applies roles, records evidence, and validates the strict gate.</p>
 
         <pre><code>Use builder-team-qc for this build.
 Project path: https://github.com/randy-aloop/everythingcodex/tree/main/projects/builder-team-qc
@@ -1024,10 +1081,10 @@ tests, seam audit, compliance review, and strict gate validation.</code></pre>
         <p>Use these docs as the operating manual for the local builder-team process.</p>
 
         <div class="resources">
-          <a class="resource" href="../builder-team-qc/docs/orchestration-notes.md">Orchestration notes<span>Operational phase-control sequence and safety defaults.</span></a>
-          <a class="resource" href="../builder-team-qc/docs/orchestration-diagram.md">Orchestration diagram<span>System, state, and ADK-style pattern views.</span></a>
-          <a class="resource" href="../builder-team-qc/docs/multi-agent-modes.md">Multi-agent modes<span>Hierarchy, shared state, delegation, and tool boundaries.</span></a>
-          <a class="resource" href="../builder-team-qc-implementation-build-and-gap-report-V01.md">Build and gap report<span>What is implemented now and what remains in the roadmap.</span></a>
+          <a class="resource" href="../plugin/docs/orchestration-notes.md">Orchestration notes<span>Operational phase-control sequence and safety defaults.</span></a>
+          <a class="resource" href="../plugin/docs/orchestration-diagram.md">Orchestration diagram<span>System, state, and ADK-style pattern views.</span></a>
+          <a class="resource" href="../plugin/docs/multi-agent-modes.md">Multi-agent modes<span>Hierarchy, shared state, delegation, and tool boundaries.</span></a>
+          <a class="resource" href="../MASTER.md">Project master file<span>Canonical project map, role contracts, version policy, and promotion checklist.</span></a>
         </div>
       </section>
     </article>
