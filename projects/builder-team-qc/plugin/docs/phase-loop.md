@@ -4,6 +4,7 @@ Builder Team QC mimics the useful part of ADK workflow routing: deterministic ph
 
 For the full hierarchy, sequential/parallel/loop mapping, and shared-state model, see `docs/multi-agent-modes.md`.
 For operational phase-control notes, see `docs/orchestration-notes.md`.
+For the detailed phase-by-phase runbook, see `docs/phase-by-phase-run-plan.md`.
 For the visual flow, see `docs/orchestration-diagram.md`.
 
 Run order:
