@@ -1,5 +1,9 @@
 # Orchestration Notes
 
+Version: V02
+Updated: 2026-06-23
+Supersedes: V01
+
 These notes describe how `builder-team-qc` should run a builder-teams multiagent Ponytail phase.
 
 V01 is intentionally local and evidence-first. It borrows the useful orchestration ideas from Google ADK, but it does not run a remote ADK service, does not expose an API server, and does not require API keys. Codex is the visible controller, role skills are the builder-team contracts, scripts are explicit tools, and `.qc/` is the shared state.
@@ -46,10 +50,10 @@ The default mode is a sequential phase pipeline with optional parallel-style rev
 
 ```text
 Sequential open:
-  read plan -> init .qc -> start phase -> identify deliverables
+  read plan -> pre-build plan check -> init .qc -> start phase -> identify deliverables
 
 Sequential build:
-  builder implementation -> Ponytail check -> tests
+  builder implementation -> persist changed-files/diff -> Ponytail check -> tests
 
 Parallel-style evidence checks:
   reviewer
@@ -61,7 +65,7 @@ Loop:
   validate -> revise smallest failing item -> validate again, max 3 failed attempts
 
 Final:
-  pass, revise, block, or accepted_with_risk -> phase-board final transition
+  pass, revise, block, or accepted_with_risk -> gate-summary -> phase-board final transition
 ```
 
 In V01, Codex performs the parallel-style checks one after another unless a future runtime adds real concurrency. The control rule is still parallel-agent shaped: all required branches must join before the gate can pass.
@@ -87,6 +91,17 @@ Before opening a phase, the controller should identify:
 
 If any intake item is unknown, the controller may start with a conservative default, but it must record the assumption in the phase record or deviation log. Conservative defaults are: `release_required=false` only when no runtime/release signal exists, `max_revise_attempts=3`, and required tests are whatever the build plan or project tooling makes meaningful for the phase.
 
+Before implementation, run a pre-build plan check:
+
+- the current phase is named
+- deliverables fit one phase
+- required evidence is known
+- release impact is classified
+- protected zones are identified
+- baseline failures or known blockers are recorded
+
+If this check fails, open an issue in `.qc/issue-register.jsonl` and stop before builder work.
+
 ## Phase Run Sequence
 
 ### 1. Initialize QC State
@@ -104,12 +119,15 @@ Expected result:
   phase-board.json
   qc-config.json
   issue-register.jsonl
+  lessons-learned.jsonl
   deviation-log.jsonl
   decision-log.jsonl
   ponytail-events.jsonl
   test-results/
   phase-runs/
 ```
+
+Confirmed current helper gap: `init_qc.py` creates the core JSONL files, but does not yet seed `lessons-learned.jsonl`. Create it manually when a phase records process lessons.
 
 ### 2. Start Or Resume The Phase
 
@@ -130,24 +148,47 @@ Expected result:
 .qc/phase-runs/<phase-id>/
   phase-record.md
   builder-notes.md
+  changed-files.json
+  implementation-diff.patch
   reviewer-report.md
   test-report.md
   compliance-report.md
   seam-audit.md
   release-gate.md
+  gate-summary.md
   evidence/
 ```
+
+Confirmed current helper gap: `start_phase.py` creates the phase markdown files and `evidence/`, but it does not yet create `changed-files.json`, `implementation-diff.patch`, or `gate-summary.md`. The controller must create those manually until helper support exists.
 
 The phase board should also carry the current gate contract:
 
 ```json
 {
+  "schema_version": "1.0",
   "current_phase_id": "<phase-id>",
   "current_phase_status": "open",
+  "next_phase_id": "<next-phase-id>",
   "latest_gate_decision": "pending",
+  "latest_gate_at": "",
   "release_required": false,
+  "release_not_applicable_rationale": "<required when release_required=false>",
   "revise_attempts": 0,
-  "max_revise_attempts": 3
+  "max_revise_attempts": 3,
+  "required_evidence": [
+    "phase-record.md",
+    "builder-notes.md",
+    "changed-files.json",
+    "implementation-diff.patch",
+    "ponytail-events.jsonl",
+    "test-results/<phase-id>.jsonl",
+    "reviewer-report.md",
+    "compliance-report.md",
+    "seam-audit.md"
+  ],
+  "blocking_issues": [],
+  "accepted_risk_decision_id": "",
+  "updated_at": "<UTC timestamp>"
 }
 ```
 
@@ -161,9 +202,12 @@ The builder role implements only the current phase. It should:
 - Avoid unrelated refactors.
 - Prefer smallest correct change.
 - Record touched files and runnable proof in `builder-notes.md`.
+- Persist `changed-files.json` and `implementation-diff.patch` for reviewer and compliance roles.
 - Log deviations when the plan cannot be followed.
 
 Builder output is not a gate decision. It is evidence for later checks.
+
+If no diff helper exists, the controller must manually write a project-relative changed-file list and patch summary before running review roles.
 
 ### 4. Apply Ponytail Discipline
 
@@ -179,6 +223,17 @@ Allowed modes:
 | `project-agents` | Project-local instructions carry Ponytail behavior. |
 | `contained-workspace` | Ponytail is used only in a contained reviewed workspace. |
 | `unavailable-fallback` | Ponytail is unavailable, so the local checklist is used. |
+
+Mode wiring:
+
+| Mode | Evidence requirement |
+| --- | --- |
+| `task-scoped` | Controller records the local checklist result. |
+| `project-agents` | Controller cites the project-local instruction file that carries Ponytail behavior. |
+| `contained-workspace` | Controller records the contained workspace path and review id. |
+| `unavailable-fallback` | Controller records why Ponytail was unavailable and which checklist replaced it. |
+
+Upstream Ponytail executable hooks are disabled by default. If enabled, record `upstream_hook_enabled=true` and an `upstream_hook_review_id` in the Ponytail event or phase notes.
 
 Record the check:
 
@@ -213,6 +268,8 @@ python scripts\record_test_result.py `
   --exit-code 0 `
   --notes "Syntax check passed"
 ```
+
+Confirmed current helper gap: `record_test_result.py` does not yet support `--required` or `--attempt`. Until it does, mark required status and attempt number in `test-report.md`. Strict gate policy still requires at least one required non-skipped passing check.
 
 Recommended test ladder:
 
@@ -251,7 +308,21 @@ The compliance role checks:
 - No secrets are stored in `.qc/`.
 - Remote/API surfaces are not introduced without explicit approval.
 
-The compliance role writes `compliance-report.md` and updates deviation or decision logs when needed. Strict gate treats `revise` and `block` as failures, not completed evidence.
+The compliance role writes `compliance-report.md` and updates deviation, issue, or decision logs when needed. Strict gate treats `revise` and `block` as failures, not completed evidence.
+
+Deviation helper:
+
+```powershell
+python scripts\record_deviation.py `
+  --root <target-project> `
+  --phase-id <phase-id> `
+  --expected "<planned requirement>" `
+  --actual "<what happened>" `
+  --severity blocker `
+  --resolution "<fix, mitigation, or pending state>"
+```
+
+Confirmed current helper gap: `record_deviation.py` does not yet support `--attempt`, `--issue-id`, or `--decision-id`. Add those fields manually for gate-relevant deviations until helper support exists.
 
 ### 8. Apply Integration Seam Role
 
@@ -290,6 +361,8 @@ The release role writes `release-gate.md` and should verify:
 - No production-only behavior is hidden from local validation.
 
 When `release_required=true`, strict validation must run in release-aware mode. With the current validator, that means adding `--release-phase`. A release/runtime phase cannot pass with `release-gate.md` still pending or `Verdict: not_applicable`.
+
+When `release_required=false`, `release-gate.md` may use `Verdict: not_applicable` only with a concrete `Not Applicable Rationale`, `Checked By`, and `Checked At`. Copy the rationale to `phase-board.json` as `release_not_applicable_rationale`.
 
 ### 10. Validate While In Progress
 
@@ -330,15 +403,18 @@ python scripts\validate_phase_record.py `
 Strict gate fails when:
 
 - Required phase files are missing.
-- Required role verdicts are pending, `revise`, or `block`.
+- Required role verdicts are missing, duplicated, pending, `revise`, `block`, or unknown.
 - Ponytail evidence is missing or not pass.
 - Test results are missing.
 - A recorded test failed.
 - Required tests are only skipped.
+- A blocker issue remains open in `.qc/issue-register.jsonl`.
 - An unaccepted blocker deviation exists.
 - An accepted-risk claim lacks a matching `.qc/decision-log.jsonl` human decision with impact, owner, deadline, rollback, and follow-up.
 - A safety scan blocker exists.
 - A release phase lacks completed release evidence.
+
+Confirmed current validator behavior: `validate_phase_record.py` returns `0` for no errors and `1` for errors. Target deterministic exit codes are `0` pass, `10` strict-gate failure, `20` schema/config/invocation error, and `30` safety blocker. Until target codes exist, the controller must record the observed exit code and interpreted class in `gate-summary.md`.
 
 ## Gate Outcomes
 
@@ -351,6 +427,8 @@ Strict gate fails when:
 
 `accepted_with_risk` is a gate bypass. The controller must not self-approve it. The decision record should include `decision_id`, `phase_id`, `accepted_by`, `risk`, `impact`, `reason`, `owner`, `deadline`, `rollback`, and `follow_up`.
 
+Target helper: `record_decision.py`. Confirmed current gap: this helper does not exist yet. Until it exists, the controller must manually append `.qc/decision-log.jsonl` and cite the decision id in `gate-summary.md`.
+
 ## Final Gate State Update
 
 After `pass` or `accepted_with_risk`, update `.qc/phase-board.json` so durable state no longer says the phase is still open or pending.
@@ -359,17 +437,26 @@ Minimum final fields:
 
 ```json
 {
+  "schema_version": "1.0",
   "current_phase_id": "<phase-id>",
   "current_phase_status": "complete",
+  "next_phase_id": "<next-phase-id>",
   "latest_gate_decision": "pass",
   "latest_gate_at": "<UTC timestamp>",
-  "next_phase_id": "<next-phase-id>",
+  "release_required": false,
+  "release_not_applicable_rationale": "<required when release_required=false>",
   "revise_attempts": 0,
+  "max_revise_attempts": 3,
+  "required_evidence": ["<evidence paths>"],
+  "accepted_risk_decision_id": "",
+  "updated_at": "<UTC timestamp>",
   "blocking_issues": []
 }
 ```
 
 If the gate is `block`, set `current_phase_status` to `blocked`, keep `latest_gate_decision=block`, and list the blocker ids or summaries in `blocking_issues`.
+
+Target helper: `record_gate_decision.py`. Confirmed current gap: this helper does not exist yet. Until it exists, the controller must manually update `.qc/phase-board.json` and write `.qc/phase-runs/<phase-id>/gate-summary.md`.
 
 ## Revise Loop
 
@@ -394,18 +481,30 @@ attempt 3:
 
 The controller should block rather than keep looping when the same condition fails repeatedly. Track `revise_attempts` in `.qc/phase-board.json`; after three failed attempts, block and ask for a human decision before continuing.
 
+Rerun affected proof by default. Rerun the full proof set when the fix touches shared contracts, schemas, runtime behavior, dependencies, Docker, safety policy, release behavior, or when the affected scope is uncertain.
+
 ## Shared State Contract
 
 | Producer | Reads | Writes |
 | --- | --- | --- |
-| phase-controller | build plan, `.qc/phase-board.json`, role reports | gate summary, phase-board updates, decision-log entries when explicitly approved |
-| builder-agent | phase record, target code | `builder-notes.md`, implementation diff |
+| phase-controller | build plan, `.qc/phase-board.json`, role reports, issue register | `gate-summary.md`, phase-board updates, decision-log entries when explicitly approved |
+| builder-agent | phase record, target code | `builder-notes.md`, `changed-files.json`, `implementation-diff.patch` |
 | ponytail-adapter | phase scope, builder plan | `.qc/ponytail-events.jsonl` |
 | test-agent | target code, qc-config, builder notes | `test-report.md`, `.qc/test-results/<phase-id>.jsonl` |
 | reviewer-agent | implementation diff, tests, builder notes | `reviewer-report.md` |
-| compliance-agent | build plan, records, protected-zone rules | `compliance-report.md`, deviation findings, decision-log review |
+| compliance-agent | build plan, records, protected-zone rules | `compliance-report.md`, deviation findings, issue records, decision-log review |
 | integration-agent | previous/current/next phase contracts | `seam-audit.md` |
 | release-agent | runtime/Docker/deploy evidence | `release-gate.md` |
+
+Before final reporting, run the current summary helper:
+
+```powershell
+python scripts\summarize_phase.py `
+  --root <target-project> `
+  --phase-id <phase-id>
+```
+
+Confirmed current behavior: it prints JSON to stdout. Capture or paste the summary into `gate-summary.md`.
 
 ## Safety Defaults
 
@@ -439,17 +538,21 @@ Target root: <project path>
 Build plan: <plan path>
 Current phase: <phase id and title>
 Run the phase controller with Ponytail minimal-code checks, tests, seam audit, compliance review, and strict gate validation.
+Persist changed-files/diff evidence, record issues/deviations, write gate-summary.md, and update the phase board before the next phase.
 ```
 
 Codex should then:
 
 1. Read the plugin docs and role skills.
-2. Initialize `.qc/`.
-3. Start the phase.
-4. Execute the phase work.
-5. Record evidence.
-6. Validate the gate.
-7. Report `pass`, `revise`, `block`, or `accepted_with_risk`.
+2. Run the pre-build plan check.
+3. Initialize `.qc/`.
+4. Start the phase.
+5. Execute the phase work.
+6. Persist changed-file and diff evidence.
+7. Record role evidence.
+8. Validate the gate.
+9. Write the gate summary and update the phase board.
+10. Report `pass`, `revise`, `block`, or `accepted_with_risk`.
 
 ## Future ADK Runtime Shape
 

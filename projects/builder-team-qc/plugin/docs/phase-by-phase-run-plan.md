@@ -1,5 +1,9 @@
 # Builder Team QC Phase-by-Phase Run Plan
 
+Version: V02
+Updated: 2026-06-23
+Supersedes: V01
+
 This is the latest detailed operating plan for running Builder Team QC phase by phase.
 
 Builder Team QC has two layers:
@@ -15,7 +19,9 @@ The product phase changes every time. The QC loop stays the same.
 user goal
   -> phase-controller
     -> open one phase
+    -> pre-build plan check
     -> builder-agent creates candidate work
+    -> changed-files/diff evidence is persisted
     -> ponytail-adapter checks minimal-code discipline
     -> evidence fan-out runs sequentially in V01
     -> strict gate decides pass / revise / block / accepted_with_risk
@@ -47,9 +53,23 @@ Controller actions:
 2. Identify the current phase only.
 3. Decide whether `release_required=true`.
 4. Set `max_revise_attempts=3` unless the user explicitly sets a lower cap.
-5. Record assumptions in the phase record or deviation log.
+5. Run the pre-build plan check.
+6. Record assumptions in the phase record or deviation log.
 
 Do not start implementation if the phase cannot be named.
+
+Pre-build plan check:
+
+| Check | Gate meaning |
+| --- | --- |
+| Current phase is named | Required before implementation. |
+| Deliverables are scoped to one phase | Block or record deviation when the work spans multiple phases. |
+| Required evidence is known | Block if there is no meaningful way to prove the phase. |
+| Release impact is classified | Default to `release_required=true` when runtime impact is uncertain. |
+| Protected zones are identified | Stop for approval before writes. |
+| Existing failures are noted | Baseline failures must not be hidden as new proof. |
+
+Record the pre-build plan check in `phase-record.md`. If the check finds a blocker, open an issue in `.qc/issue-register.jsonl` and do not continue to builder work.
 
 Example phase identity:
 
@@ -78,6 +98,7 @@ Expected state:
   phase-board.json
   qc-config.json
   issue-register.jsonl
+  lessons-learned.jsonl
   deviation-log.jsonl
   decision-log.jsonl
   ponytail-events.jsonl
@@ -88,6 +109,8 @@ Expected state:
 Gate rule:
 
 - If `.qc/` cannot be created or inspected, stop and report `block`.
+
+Confirmed current helper gap: `init_qc.py` creates the core JSONL files, but does not yet seed `lessons-learned.jsonl`. Create it manually when a phase records process lessons.
 
 ## Phase 2 - Start Or Resume The Phase
 
@@ -110,24 +133,47 @@ Expected state:
 .qc/phase-runs/<phase-id>/
   phase-record.md
   builder-notes.md
+  changed-files.json
+  implementation-diff.patch
   reviewer-report.md
   test-report.md
   compliance-report.md
   seam-audit.md
   release-gate.md
+  gate-summary.md
   evidence/
 ```
+
+Confirmed current helper gap: `start_phase.py` creates the phase markdown files and `evidence/`, but it does not yet create `changed-files.json`, `implementation-diff.patch`, or `gate-summary.md`. The controller must create those manually until helper support exists.
 
 Manual phase-board contract until helper support exists:
 
 ```json
 {
+  "schema_version": "1.0",
   "current_phase_id": "<phase-id>",
   "current_phase_status": "open",
+  "next_phase_id": "<next-phase-id>",
   "latest_gate_decision": "pending",
+  "latest_gate_at": "",
   "release_required": false,
+  "release_not_applicable_rationale": "<required when release_required=false>",
   "revise_attempts": 0,
-  "max_revise_attempts": 3
+  "max_revise_attempts": 3,
+  "required_evidence": [
+    "phase-record.md",
+    "builder-notes.md",
+    "changed-files.json",
+    "implementation-diff.patch",
+    "ponytail-events.jsonl",
+    "test-results/<phase-id>.jsonl",
+    "reviewer-report.md",
+    "compliance-report.md",
+    "seam-audit.md"
+  ],
+  "blocking_issues": [],
+  "accepted_risk_decision_id": "",
+  "updated_at": "<UTC timestamp>"
 }
 ```
 
@@ -155,6 +201,8 @@ Output:
 
 ```text
 .qc/phase-runs/<phase-id>/builder-notes.md
+.qc/phase-runs/<phase-id>/changed-files.json
+.qc/phase-runs/<phase-id>/implementation-diff.patch
 candidate source/document changes
 ```
 
@@ -162,6 +210,11 @@ Gate rule:
 
 - Builder output is evidence, not a gate decision.
 - If implementation needs scope beyond the phase, record a deviation before continuing.
+- The reviewer and compliance roles must read the persisted changed-file/diff evidence, not only a chat summary.
+
+Current helper gap:
+
+- There is no dedicated diff recorder yet. Until one exists, the controller must create or refresh `changed-files.json` and `implementation-diff.patch` manually after builder work and after each revise attempt.
 
 ## Phase 4 - Ponytail Minimal-Code Gate
 
@@ -196,6 +249,8 @@ Gate rule:
 
 - Tests/review fan-out should not proceed if Ponytail verdict is `revise` or `block`.
 - The latest Ponytail event for the phase must be `pass` before final gate pass.
+- The Ponytail event should include the current attempt number and mode source. Current helper support is incomplete, so record missing attempt/mode-source details in `phase-record.md` when the JSONL event cannot carry them.
+- Upstream Ponytail hooks are off by default. They require an explicit review id and user approval before being treated as executable tooling.
 
 ## Phase 5 - Evidence Fan-Out
 
@@ -238,6 +293,27 @@ python scripts\record_test_result.py `
   --command "<command run>" `
   --status pass `
   --exit-code 0 `
+  --notes "Syntax check passed"
+```
+
+Current helper gap:
+
+- Confirmed current `record_test_result.py` supports `--name`, `--command`, `--status`, `--exit-code`, `--output-file`, and `--notes`.
+- It does not yet support `--required` or `--attempt`.
+- Until that support exists, the controller must write required status and attempt number in `test-report.md`.
+
+Target command contract after helper hardening:
+
+```powershell
+python scripts\record_test_result.py `
+  --root <target-project> `
+  --phase-id <phase-id> `
+  --attempt 1 `
+  --name syntax `
+  --command "<command run>" `
+  --status pass `
+  --exit-code 0 `
+  --required `
   --notes "Syntax check passed"
 ```
 
@@ -350,6 +426,7 @@ Gate rule:
 
 - `Verdict: not_applicable` is allowed only when `release_required=false`.
 - If runtime impact is uncertain, default to `release_required=true` until the controller records why release evidence is not applicable.
+- When `release_required=false`, `release-gate.md` must include `Release Required: false`, `Not Applicable Rationale`, `Checked By`, and `Checked At`, and the same rationale must be copied to `phase-board.json`.
 
 ## Phase 6 - In-Progress Validation
 
@@ -401,15 +478,22 @@ python scripts\validate_phase_record.py `
 Strict gate blocks when:
 
 - required files are missing
-- required role verdicts are `pending`, `revise`, or `block`
+- required role verdicts are missing, duplicated, unknown, `pending`, `revise`, or `block`
 - latest Ponytail verdict is not `pass`
 - no test result exists
 - all required tests are skipped
 - any recorded test failed
+- a blocker issue remains open in `.qc/issue-register.jsonl`
 - unaccepted blocker deviation exists
 - accepted-risk claim lacks matching decision-log entry
 - safety scan finds banned markers
 - release phase lacks completed release evidence
+
+Exit-code handling:
+
+- Confirmed current `validate_phase_record.py` returns `0` when no errors are present and `1` for any validation error.
+- Target contract is `0` pass, `10` strict-gate failure, `20` schema/config/invocation error, and `30` safety blocker.
+- Until target exit codes are implemented, the controller must read the validator output and record the observed exit code plus the interpreted failure class in `gate-summary.md`.
 
 ## Phase 8 - Revise Loop
 
@@ -418,8 +502,8 @@ Goal: fix only the smallest failing item.
 Loop cap:
 
 ```text
-attempt 1 -> fix smallest failing item -> rerun affected proof
-attempt 2 -> narrow blocker -> rerun affected proof
+attempt 1 -> fix smallest failing item -> rerun affected proof by default
+attempt 2 -> narrow blocker -> rerun affected proof by default
 attempt 3 -> pass, block, or ask for human accepted-risk decision
 ```
 
@@ -427,9 +511,15 @@ State:
 
 ```json
 {
+  "schema_version": "1.0",
+  "current_phase_id": "<phase-id>",
   "current_phase_status": "revising",
+  "latest_gate_decision": "revise",
+  "latest_gate_at": "<UTC timestamp>",
   "revise_attempts": 1,
-  "max_revise_attempts": 3
+  "max_revise_attempts": 3,
+  "blocking_issues": ["<issue-id or summary>"],
+  "updated_at": "<UTC timestamp>"
 }
 ```
 
@@ -438,6 +528,8 @@ Gate rule:
 - After three failed revise attempts, block.
 - Do not keep retrying silently.
 - Raising the cap requires an explicit human decision.
+- Rerun the full proof set, not only affected proof, when the fix touches shared contracts, schema, runtime behavior, dependencies, Docker, safety policy, release behavior, or when the affected scope is uncertain.
+- Record each failed attempt in `phase-board.json`, `.qc/issue-register.jsonl`, and the relevant role report.
 
 ## Phase 9 - Accepted Risk Path
 
@@ -465,6 +557,28 @@ Gate rule:
 
 - The controller cannot self-approve accepted risk.
 - A boolean in `deviation-log.jsonl` is not enough without a matching decision-log record.
+- `accepted_with_risk` must reference a human decision id in both the deviation or issue record and `phase-board.json`.
+
+Target helper contract:
+
+```powershell
+python scripts\record_decision.py `
+  --root <target-project> `
+  --phase-id <phase-id> `
+  --decision-type accepted_with_risk `
+  --accepted-by "<human approver>" `
+  --risk "<what remains unverified>" `
+  --impact "<blast radius>" `
+  --reason "<why accepted>" `
+  --owner "<follow-up owner>" `
+  --deadline "<date or phase>" `
+  --rollback "<rollback path>" `
+  --follow-up "<next required check>"
+```
+
+Current helper gap:
+
+- `record_decision.py` does not exist yet. Until it exists, append the JSONL record manually and disclose that manual action in the user-facing report.
 
 ## Phase 10 - Final Gate State Update
 
@@ -474,10 +588,20 @@ For `pass`:
 
 ```json
 {
+  "schema_version": "1.0",
+  "current_phase_id": "<phase-id>",
   "current_phase_status": "complete",
+  "next_phase_id": "<next-phase-id>",
   "latest_gate_decision": "pass",
   "latest_gate_at": "<UTC timestamp>",
-  "blocking_issues": []
+  "release_required": false,
+  "release_not_applicable_rationale": "<required when release_required=false>",
+  "revise_attempts": 0,
+  "max_revise_attempts": 3,
+  "required_evidence": ["<evidence paths>"],
+  "blocking_issues": [],
+  "accepted_risk_decision_id": "",
+  "updated_at": "<UTC timestamp>"
 }
 ```
 
@@ -485,10 +609,20 @@ For `block`:
 
 ```json
 {
+  "schema_version": "1.0",
+  "current_phase_id": "<phase-id>",
   "current_phase_status": "blocked",
+  "next_phase_id": "<next-phase-id>",
   "latest_gate_decision": "block",
   "latest_gate_at": "<UTC timestamp>",
-  "blocking_issues": ["<blocker summary>"]
+  "release_required": false,
+  "release_not_applicable_rationale": "<required when release_required=false>",
+  "revise_attempts": 3,
+  "max_revise_attempts": 3,
+  "required_evidence": ["<evidence paths>"],
+  "blocking_issues": ["<issue-id or blocker summary>"],
+  "accepted_risk_decision_id": "",
+  "updated_at": "<UTC timestamp>"
 }
 ```
 
@@ -496,17 +630,41 @@ For `accepted_with_risk`:
 
 ```json
 {
+  "schema_version": "1.0",
+  "current_phase_id": "<phase-id>",
   "current_phase_status": "complete",
+  "next_phase_id": "<next-phase-id>",
   "latest_gate_decision": "accepted_with_risk",
   "latest_gate_at": "<UTC timestamp>",
+  "release_required": false,
+  "release_not_applicable_rationale": "<required when release_required=false>",
+  "revise_attempts": 0,
+  "max_revise_attempts": 3,
+  "required_evidence": ["<evidence paths>"],
   "blocking_issues": [],
-  "accepted_risk_decision_id": "<decision-id>"
+  "accepted_risk_decision_id": "<decision-id>",
+  "updated_at": "<UTC timestamp>"
 }
 ```
 
 Gate rule:
 
 - No next phase starts while `phase-board.json` still says `open` and `latest_gate_decision=pending`.
+
+Target helper contract:
+
+```powershell
+python scripts\record_gate_decision.py `
+  --root <target-project> `
+  --phase-id <phase-id> `
+  --decision pass `
+  --validator-exit-code 0 `
+  --summary "<short gate summary>"
+```
+
+Current helper gap:
+
+- `record_gate_decision.py` does not exist yet. Until it exists, update `phase-board.json` and write `gate-summary.md` manually.
 
 ## Phase 11 - User-Facing Report
 
@@ -526,6 +684,18 @@ Report:
 - next phase recommendation
 
 Do not say "complete" unless strict validation and final phase-board update are complete.
+
+Use the existing summary helper before writing the final report:
+
+```powershell
+python scripts\summarize_phase.py `
+  --root <target-project> `
+  --phase-id <phase-id>
+```
+
+Confirmed current behavior: `summarize_phase.py` prints JSON to stdout and does not write a file. Capture or paste the summary into `gate-summary.md`.
+
+If the phase reveals a reusable process lesson, append it to `.qc/lessons-learned.jsonl`. Lessons do not satisfy or bypass current blockers.
 
 ## Phase 12 - Next Phase Handoff
 
@@ -550,23 +720,25 @@ Gate rule:
 
 ```text
 0. Intake and choose one phase
+0A. Run pre-build plan check and open blocker issues if needed
 1. init_qc.py
 2. start_phase.py
 3. builder-agent creates candidate
-4. ponytail-adapter gates scope/minimal-code
-5. evidence fan-out, sequential in V01
-   5A. test-agent
-   5B. reviewer-agent
-   5C. compliance-agent
-   5D. integration-agent
-   5E. release-agent when release_required=true
-6. validate in progress
-7. validate strict gate
-8. revise loop, max 3 failed attempts
-9. accepted-risk path only with human decision-log proof
-10. update phase-board final state
-11. report gate result
-12. hand off next phase
+4. persist changed-files/diff evidence
+5. ponytail-adapter gates scope/minimal-code
+6. evidence fan-out, sequential in V01
+   6A. test-agent
+   6B. reviewer-agent
+   6C. compliance-agent
+   6D. integration-agent
+   6E. release-agent when release_required=true
+7. validate in progress
+8. validate strict gate
+9. revise loop, max 3 failed attempts
+10. accepted-risk path only with human decision-log proof
+11. update phase-board final state
+12. summarize and report gate result
+13. hand off next phase
 ```
 
 ## Recommended Prompt
@@ -579,14 +751,16 @@ Current phase: <phase id and title>
 Next phase: <next phase id or unknown>
 Run the latest phase-by-phase controller plan:
 - initialize or verify .qc
+- run the pre-build plan check
 - start/resume the phase
 - run builder-agent
+- persist changed-files/diff evidence
 - run Ponytail before test/review fan-out
 - run tests, reviewer, compliance, seam audit, and release gate when required
 - run strict validation, using --release-phase when release_required=true
 - cap revise loop at three failed attempts
 - require decision-log proof for accepted_with_risk
-- update phase-board final gate state before allowing the next phase
+- write gate-summary.md and update phase-board final gate state before allowing the next phase
 ```
 
 ## Current Implementation Note

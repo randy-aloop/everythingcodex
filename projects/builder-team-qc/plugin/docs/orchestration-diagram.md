@@ -1,5 +1,9 @@
 # Orchestration Diagram
 
+Version: V02
+Updated: 2026-06-23
+Supersedes: V01
+
 This diagram shows how `builder-team-qc` runs a phase-controlled multiagent Ponytail build in V01.
 
 The important correction: `ponytail-adapter` is not owned by `test-agent`. Ponytail checks the builder output and contributes gate evidence for the controller, reviewer, and compliance roles. Tests run after Ponytail passes because testing an over-scoped or over-abstracted change is usually wasted work.
@@ -15,12 +19,17 @@ flowchart TD
     P --> PC["phase-controller"]
 
     PC --> PLAN["Read build plan"]
-    PLAN --> INIT["Initialize .qc"]
+    PLAN --> PRE["Pre-build plan check"]
+    PRE --> READY{"Phase ready?"}
+    READY -- "no" --> ISSUE["Open blocker in issue-register.jsonl"]
+    ISSUE --> STOP
+    READY -- "yes" --> INIT["Initialize .qc"]
     INIT --> START["Start phase record"]
     START --> META["Set release_required and max_revise_attempts"]
     META --> B["builder-agent creates candidate change"]
+    B --> DIFF["Persist changed-files.json and implementation-diff.patch"]
 
-    B --> PT["ponytail-adapter checks scope and minimal-code discipline"]
+    DIFF --> PT["ponytail-adapter checks scope and minimal-code discipline"]
     PT --> PTG{"Ponytail verdict"}
 
     PTG -- "pass" --> FAN["Evidence check fan-out"]
@@ -46,7 +55,8 @@ flowchart TD
     V1 --> V2["Validate strict gate, release-aware when required"]
     V2 --> GATE{"Gate decision"}
 
-    GATE -- "pass" --> BOARD["Record final phase-board transition"]
+    GATE -- "pass" --> SUMMARY["Write gate-summary.md"]
+    SUMMARY --> BOARD["Record final phase-board transition"]
     BOARD --> NEXT["Allow next phase"]
     GATE -- "revise" --> CAP{"Revise attempts < 3?"}
     CAP -- "yes" --> FIX["Fix smallest failing item"]
@@ -54,7 +64,7 @@ flowchart TD
     CAP -- "no" --> STOP
     GATE -- "block" --> STOP["Stop and report blocker"]
     GATE -- "accepted_with_risk" --> RISK["Record human decision-log entry"]
-    RISK --> BOARD
+    RISK --> SUMMARY
 ```
 
 ## Evidence Responsibility View
@@ -62,40 +72,45 @@ flowchart TD
 ```mermaid
 flowchart LR
     B["builder-agent"] --> CHANGE["Candidate implementation"]
-    CHANGE --> PT["ponytail-adapter"]
+    CHANGE --> DIFF["changed-files.json + implementation-diff.patch"]
+    DIFF --> PT["ponytail-adapter"]
     PT --> PONY["ponytail-events.jsonl"]
 
     PONY --> PC["phase-controller"]
     PONY --> R["reviewer-agent"]
     PONY --> CMP["compliance-agent"]
 
-    CHANGE --> T["test-agent"]
-    CHANGE --> R
-    CHANGE --> I["integration-agent"]
+    DIFF --> T["test-agent"]
+    DIFF --> R
+    DIFF --> I["integration-agent"]
     CHANGE --> REL{"Release relevant?"}
     REL -- "yes" --> RA["release-agent"]
 
     T --> TESTS["test-results/{phase-id}.jsonl"]
     R --> REVIEW["reviewer-report.md"]
     CMP --> COMP["compliance-report.md"]
+    CMP --> ISSUES["issue-register.jsonl"]
     I --> SEAM["seam-audit.md"]
     RA --> RELEASE["release-gate.md"]
     PC --> DECISION["decision-log.jsonl when accepted risk"]
+    PC --> SUMMARY["gate-summary.md"]
     PC --> BOARD["phase-board.json final gate"]
 
     PONY --> STRICT["strict gate"]
     TESTS --> STRICT
     REVIEW --> STRICT
     COMP --> STRICT
+    ISSUES --> STRICT
     SEAM --> STRICT
     RELEASE --> STRICT
     DECISION --> STRICT
+    SUMMARY --> BOARD
     STRICT --> BOARD
 
     STRICT --> OUT{"pass / revise / block / accepted_with_risk"}
 ```
 
-Strict gate requires `pass` verdicts for required role reports. `revise`, `block`, missing verdicts, only skipped required tests, or release phases with `release-gate.md` still `not_applicable` must not pass without a matching human accepted-risk record.
+Strict gate requires `pass` verdicts for required role reports. `revise`, `block`, missing or conflicting verdicts, open blocker issues, only skipped required tests, or release phases with `release-gate.md` still `not_applicable` must not pass without a matching human accepted-risk record. When release is not required, `not_applicable` still needs a written rationale.
 
 ## Shared State View
 
@@ -116,8 +131,10 @@ flowchart LR
         PHASE["phase-runs/{phase-id}/"]
         TESTS["test-results/{phase-id}.jsonl"]
         PONY["ponytail-events.jsonl"]
+        ISSUES["issue-register.jsonl"]
         DEV["deviation-log.jsonl"]
         DEC["decision-log.jsonl"]
+        LESSONS["lessons-learned.jsonl"]
     end
 
     B --> PHASE
@@ -125,19 +142,23 @@ flowchart LR
     T --> TESTS
     R --> PHASE
     C --> PHASE
+    C --> ISSUES
     C --> DEV
     C --> DEC
     I --> PHASE
     RA --> PHASE
     PC --> BOARD
     PC --> DEC
+    PC --> LESSONS
 
     BOARD --> PC["phase-controller"]
     PHASE --> PC
     TESTS --> PC
     PONY --> PC
+    ISSUES --> PC
     DEV --> PC
     DEC --> PC
+    LESSONS --> PC
 
     PONY --> R
     PONY --> C
@@ -153,9 +174,11 @@ flowchart TD
     ROOT["Root controller: phase-controller"] --> LOOP["LoopAgent pattern: bounded revise loop"]
     LOOP --> SEQ["SequentialAgent pattern: phase pipeline"]
 
-    SEQ --> OPEN["Open phase"]
+    SEQ --> PRE["Pre-build plan check"]
+    PRE --> OPEN["Open phase"]
     OPEN --> BUILD["Builder creates candidate change"]
-    BUILD --> PONY["Ponytail minimal-code gate"]
+    BUILD --> DIFF["Persist diff evidence"]
+    DIFF --> PONY["Ponytail minimal-code gate"]
     PONY --> PASS{"Ponytail pass?"}
 
     PASS -- "yes" --> PAR["Logical fan-out: sequential in V01"]

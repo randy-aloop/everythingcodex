@@ -1,5 +1,9 @@
 # Multi-Agent Run Model
 
+Version: V02
+Updated: 2026-06-23
+Supersedes: V01
+
 Builder Team QC uses ADK-style orchestration ideas without depending on a live Google ADK runtime in V01.
 
 The root controller is the `phase-controller` Codex skill. The role skills behave like sub-agents, and the `.qc/` folder behaves like shared session state. Scripts are explicit tools that record evidence and validate phase gates.
@@ -48,6 +52,8 @@ Explicit script tools
   record_deviation.py
   validate_phase_record.py
   summarize_phase.py
+  record_decision.py, planned
+  record_gate_decision.py, planned
 ```
 
 The role skills are the stable org chart. The scripts are tools called by the controller to create records, not independent agents that take over control.
@@ -58,6 +64,18 @@ Two hardening tool contracts are required before this process can be called full
 - `record_gate_decision.py` or an equivalent controller step must update `.qc/phase-board.json` after the final gate.
 
 Until those helpers exist, the controller must write those records manually and report that the decision/gate transition was manually recorded.
+
+The same rule applies to fields that current helper scripts do not yet support, such as test `required`, test `attempt`, Ponytail `attempt`, Ponytail `mode_source`, deviation `issue_id`, and final gate summary output. Missing helper support is a current implementation gap, not permission to omit the evidence.
+
+## Context Isolation
+
+V01 uses one Codex conversation, so role separation is logical rather than process-isolated. To reduce self-grading risk:
+
+- The builder role records changed files and implementation evidence before review starts.
+- Reviewer, compliance, and integration roles read persisted `.qc` records and project files instead of relying only on the builder's chat summary.
+- The controller treats model-authored reports as judgment evidence, not executable proof.
+- Tests, validators, safety scans, and file artifacts carry more weight than a role saying "complete."
+- If a future runtime runs real parallel or isolated agents, it should still write to the same `.qc` contract.
 
 ## ADK Concept Mapping
 
@@ -79,19 +97,21 @@ The normal run is sequential because phase evidence has dependencies.
 
 ```text
 1. Read build plan and current phase.
-2. Initialize `.qc/` if needed.
-3. Start or resume phase record.
-4. Apply builder role.
-5. Apply Ponytail minimal-code check.
-6. Record tests.
-7. Apply reviewer role.
-8. Apply compliance role.
-9. Apply integration seam audit.
-10. Apply release role when the phase is runtime, Docker, deploy, or production-related.
-11. Run in-progress validation.
-12. Run strict gate validation before completion.
-13. Decide pass, revise, block, or accepted_with_risk.
-14. Record the final gate transition in `.qc/phase-board.json`.
+2. Run the pre-build plan check and open blocker issues if the phase is not ready.
+3. Initialize `.qc/` if needed.
+4. Start or resume phase record.
+5. Apply builder role.
+6. Persist `changed-files.json` and `implementation-diff.patch`.
+7. Apply Ponytail minimal-code check.
+8. Record tests.
+9. Apply reviewer role.
+10. Apply compliance role.
+11. Apply integration seam audit.
+12. Apply release role when the phase is runtime, Docker, deploy, or production-related.
+13. Run in-progress validation.
+14. Run strict gate validation before completion.
+15. Decide pass, revise, block, or accepted_with_risk.
+16. Record `gate-summary.md` and the final gate transition in `.qc/phase-board.json`.
 ```
 
 Command skeleton:
@@ -117,7 +137,7 @@ python scripts\record_ponytail_check.py `
   --yagni-check "No extra scope added" `
   --stdlib-check "Used existing project/runtime tools where possible" `
   --dependency-check "No new dependency added" `
-  --abstraction-check "No new abstraction unless needed" `
+  --abstraction-check "No new abstraction unless required" `
   --minimum-code-verdict pass `
   --notes "Minimal-code check completed"
 
@@ -167,6 +187,7 @@ After builder output exists:
 
 Join point:
   phase-controller reads all role outputs
+  phase-controller reads issue-register, changed-files, and diff artifacts
   validate_phase_record.py checks evidence
   strict gate decides next action
 ```
@@ -192,7 +213,8 @@ while strict gate does not pass:
     gate = revise
     increment revise_attempts
     builder fixes the smallest failing item
-    tests/review/compliance/seam run again
+    affected tests/review/compliance/seam run again
+    full proof reruns when contracts, schema, runtime, release behavior, dependencies, Docker, or safety policy changed
     strict validation runs again
 
 gate = pass only when required evidence is complete
@@ -209,14 +231,19 @@ ADK shared session state is represented by `.qc/`.
 | `.qc/phase-board.json` | Current phase id, status, next phase, release requirement, revise attempt count, required evidence, latest gate, and final gate timestamp. |
 | `.qc/phase-runs/<phase-id>/phase-record.md` | Phase plan, deliverables, evidence index, final gate notes. |
 | `.qc/phase-runs/<phase-id>/builder-notes.md` | Builder role output. |
+| `.qc/phase-runs/<phase-id>/changed-files.json` | Machine-readable changed-file list for reviewer and compliance roles. |
+| `.qc/phase-runs/<phase-id>/implementation-diff.patch` | Diff evidence or equivalent patch summary. |
 | `.qc/phase-runs/<phase-id>/reviewer-report.md` | Reviewer role output. |
 | `.qc/phase-runs/<phase-id>/test-report.md` | Human-readable test evidence. |
 | `.qc/test-results/<phase-id>.jsonl` | Machine-readable test events. |
 | `.qc/ponytail-events.jsonl` | Ponytail mode and minimal-code verdicts. |
+| `.qc/issue-register.jsonl` | Open/fixed/blocker issue records created by role checks. |
 | `.qc/deviation-log.jsonl` | Deviations, blockers, and links to accepted-risk decision ids. |
 | `.qc/decision-log.jsonl` | Human decisions, approvals, accepted-risk records, owner, deadline, rollback, and follow-up commitments. |
 | `.qc/phase-runs/<phase-id>/seam-audit.md` | Previous/current/next compatibility evidence. |
 | `.qc/phase-runs/<phase-id>/release-gate.md` | Production debug, Docker/runtime, rollback, and no-secrets evidence. |
+| `.qc/phase-runs/<phase-id>/gate-summary.md` | Final validator result, role verdict table, gate decision, and phase-board update note. |
+| `.qc/lessons-learned.jsonl` | Future-process lessons that do not bypass current blockers. |
 
 Each role reads the current state and writes only its evidence. The phase controller reads everything and decides the gate.
 
@@ -263,7 +290,9 @@ The phase controller can return four outcomes:
 
 No next phase should start until the current gate allows it.
 
-Strict-gate validation should treat `Verdict: revise` and `Verdict: block` in required role reports as failures, not as completed evidence. Required tests that are only `skipped` also fail the gate unless a matching accepted-risk decision exists.
+Strict-gate validation should treat missing verdicts, duplicate/conflicting verdicts, `Verdict: revise`, and `Verdict: block` in required role reports as failures, not as completed evidence. Required tests that are only `skipped` also fail the gate unless a matching accepted-risk decision exists. Open blocker issues in `.qc/issue-register.jsonl` block the gate.
+
+Confirmed current validator behavior: `validate_phase_record.py` currently returns `0` for success and `1` for errors. The target deterministic contract is richer: `0` pass, `10` strict-gate failure, `20` schema/config/invocation error, and `30` safety blocker. Until implemented, the controller must classify the observed `1` in `gate-summary.md`.
 
 ## Future ADK-Compatible Shape
 
