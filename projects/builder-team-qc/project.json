@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "name": "builder-team-qc",
+  "display_name": "Builder Team QC",
+  "version": "0.1.0-planning",
+  "status": "planning",
+  "description": "Local phase-controlled multi-agent builder process for Codex with Ponytail minimal-code gates, .qc evidence records, role contracts, seam audits, release gates, and strict validation.",
+  "repository_path": "projects/builder-team-qc",
+  "primary_deliverable": "Codex plugin/process",
+  "secondary_deliverable": "Static developer article page",
+  "local_only_by_default": true,
+  "requires_secrets": false,
+  "remote_services_enabled_by_default": false,
+  "roles": [
+    "phase-controller",
+    "builder-agent",
+    "ponytail-adapter",
+    "test-agent",
+    "reviewer-agent",
+    "compliance-agent",
+    "integration-agent",
+    "release-agent"
+  ],
+  "gate_outcomes": [
+    "pass",
+    "revise",
+    "block",
+    "accepted_with_risk"
+  ],
+  "artifacts": {
+    "plugin": "plugin/",
+    "site": "site/index.html",
+    "master_file": "MASTER.md",
+    "structure": "STRUCTURE.md",
+    "changelog": "CHANGELOG.md"
+  }
+}

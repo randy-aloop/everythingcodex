@@ -1,0 +1,25 @@
+{
+  "name": "builder-team-qc",
+  "version": "0.1.0",
+  "description": "Local phase-controlled builder-team QC workflow with role contracts, .qc records, Ponytail minimal-code checks, seam audits, release gates, and no-remote safety scans.",
+  "author": {
+    "name": "Workhorse local"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Builder Team QC",
+    "shortDescription": "Run local phase gates for multiagent builds.",
+    "longDescription": "Builder Team QC coordinates phase-controlled software builds with builder, reviewer, test, compliance, integration, and release roles. It creates durable .qc records, applies Ponytail minimal-code discipline, checks previous/current/next seams, and blocks remote/API/credential surfaces by default.",
+    "developerName": "Workhorse local",
+    "category": "Productivity",
+    "capabilities": [
+      "Write",
+      "Analysis"
+    ],
+    "defaultPrompt": [
+      "Use builder-team-qc for this build.",
+      "Start the next QC phase gate.",
+      "Validate the current .qc phase record."
+    ]
+  }
+}

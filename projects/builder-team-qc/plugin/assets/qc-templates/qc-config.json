@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "quick_test_commands": [],
+  "docker_smoke_commands": [],
+  "release_phase_patterns": [
+    "release",
+    "deploy",
+    "runtime",
+    "docker",
+    "production"
+  ],
+  "local_only": {
+    "allow_network": false,
+    "allow_a2a": false,
+    "allow_mcp_remote": false,
+    "allow_openapi_remote": false,
+    "allow_code_executor": false,
+    "allow_remote_docker": false,
+    "allowed_hosts": [
+      "127.0.0.1",
+      "localhost"
+    ]
+  }
+}
