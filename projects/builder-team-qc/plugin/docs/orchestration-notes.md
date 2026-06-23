@@ -18,7 +18,7 @@ scripts write durable records
 strict validation decides whether the phase can complete
 ```
 
-No role is allowed to silently advance the build. No next phase starts until the current phase has a `pass` gate or an explicitly recorded `accepted_with_risk` decision.
+No role is allowed to silently advance the build. No next phase starts until the current phase has a `pass` gate or an explicitly recorded `accepted_with_risk` decision in `.qc/decision-log.jsonl`.
 
 ## Controller Stack
 
@@ -45,7 +45,7 @@ Sequential open:
   read plan -> init .qc -> start phase -> identify deliverables
 
 Sequential build:
-  builder -> Ponytail check -> implementation -> tests
+  builder implementation -> Ponytail check -> tests
 
 Parallel-style evidence checks:
   reviewer
@@ -54,13 +54,13 @@ Parallel-style evidence checks:
   release/debug gate when applicable
 
 Loop:
-  validate -> revise smallest failing item -> validate again
+  validate -> revise smallest failing item -> validate again, max 3 failed attempts
 
 Final:
-  pass, revise, block, or accepted_with_risk
+  pass, revise, block, or accepted_with_risk -> phase-board final transition
 ```
 
-In V01, Codex may perform the parallel-style checks one after another. The control rule is still parallel-agent shaped: all required branches must join before the gate can pass.
+In V01, Codex performs the parallel-style checks one after another unless a future runtime adds real concurrency. The control rule is still parallel-agent shaped: all required branches must join before the gate can pass.
 
 ## Intake Checklist
 
@@ -75,11 +75,13 @@ Before opening a phase, the controller should identify:
 | Next phase id | Empty if unknown, otherwise the next planned phase. |
 | Ponytail mode | `task-scoped`, `project-agents`, `contained-workspace`, or `unavailable-fallback`. |
 | Runtime impact | Whether the phase touches Docker, dependencies, APIs, runtime, deploy, or production behavior. |
+| Release required | `true` when runtime impact requires a completed `release-gate.md` and release-aware strict validation. |
+| Max revise attempts | Default `3`; lower when risk is high. Raising the cap requires an explicit user decision. |
 | Required tests | Commands or checks expected for this phase. |
 | Protected zones | Any files/areas that need explicit approval before writes. |
 | Known risks | Open assumptions, missing approvals, or possible blockers. |
 
-If any intake item is unknown, the controller may start with a conservative default, but it must record the assumption in the phase record or deviation log.
+If any intake item is unknown, the controller may start with a conservative default, but it must record the assumption in the phase record or deviation log. Conservative defaults are: `release_required=false` only when no runtime/release signal exists, `max_revise_attempts=3`, and required tests are whatever the build plan or project tooling makes meaningful for the phase.
 
 ## Phase Run Sequence
 
@@ -131,6 +133,21 @@ Expected result:
   release-gate.md
   evidence/
 ```
+
+The phase board should also carry the current gate contract:
+
+```json
+{
+  "current_phase_id": "<phase-id>",
+  "current_phase_status": "open",
+  "latest_gate_decision": "pending",
+  "release_required": false,
+  "revise_attempts": 0,
+  "max_revise_attempts": 3
+}
+```
+
+If helper support for those fields is not implemented yet, the controller must maintain them manually in `.qc/phase-board.json` and say so in the gate summary.
 
 ### 3. Apply Builder Role
 
@@ -204,6 +221,8 @@ Docker smoke when runtime packaging changes
 stress check only when required by phase risk
 ```
 
+Strict gate requires at least one required non-skipped passing check. A phase with only `skipped` checks is blocked unless the user explicitly accepts the risk in `.qc/decision-log.jsonl`.
+
 ### 6. Apply Reviewer Role
 
 The reviewer checks:
@@ -215,7 +234,7 @@ The reviewer checks:
 - Test adequacy.
 - Whether the diff matches the phase plan.
 
-The reviewer writes `reviewer-report.md` and should choose a verdict of `pass`, `revise`, or `block`.
+The reviewer writes `reviewer-report.md` and should choose a verdict of `pass`, `revise`, or `block`. Strict gate treats `revise` and `block` as failures, not completed evidence.
 
 ### 7. Apply Compliance Role
 
@@ -228,7 +247,7 @@ The compliance role checks:
 - No secrets are stored in `.qc/`.
 - Remote/API surfaces are not introduced without explicit approval.
 
-The compliance role writes `compliance-report.md` and updates deviation or decision logs when needed.
+The compliance role writes `compliance-report.md` and updates deviation or decision logs when needed. Strict gate treats `revise` and `block` as failures, not completed evidence.
 
 ### 8. Apply Integration Seam Role
 
@@ -244,7 +263,7 @@ Are schemas, config, migrations, docs, tests, and debug paths compatible?
 What would break if the next phase started now?
 ```
 
-The integration role writes `seam-audit.md`. A missing or pending seam audit blocks phase completion.
+The integration role writes `seam-audit.md`. A missing, pending, `revise`, or `block` seam audit blocks phase completion.
 
 ### 9. Apply Release Role When Applicable
 
@@ -265,6 +284,8 @@ The release role writes `release-gate.md` and should verify:
 - Rollback or disable path exists.
 - Docker/container health is inspectable when applicable.
 - No production-only behavior is hidden from local validation.
+
+When `release_required=true`, strict validation must run in release-aware mode. With the current validator, that means adding `--release-phase`. A release/runtime phase cannot pass with `release-gate.md` still pending or `Verdict: not_applicable`.
 
 ### 10. Validate While In Progress
 
@@ -291,14 +312,27 @@ python scripts\validate_phase_record.py `
   --strict-gate
 ```
 
+For release/runtime phases, run:
+
+```powershell
+python scripts\validate_phase_record.py `
+  --root <target-project> `
+  --phase-id <phase-id> `
+  --scan-safety `
+  --strict-gate `
+  --release-phase
+```
+
 Strict gate fails when:
 
 - Required phase files are missing.
-- Required role verdicts are still pending.
+- Required role verdicts are pending, `revise`, or `block`.
 - Ponytail evidence is missing or not pass.
 - Test results are missing.
 - A recorded test failed.
+- Required tests are only skipped.
 - An unaccepted blocker deviation exists.
+- An accepted-risk claim lacks a matching `.qc/decision-log.jsonl` human decision with impact, owner, deadline, rollback, and follow-up.
 - A safety scan blocker exists.
 - A release phase lacks completed release evidence.
 
@@ -306,10 +340,32 @@ Strict gate fails when:
 
 | Gate | Meaning | Controller action |
 | --- | --- | --- |
-| `pass` | Required evidence is complete and checks pass. | Summarize evidence and allow next phase. |
+| `pass` | Required evidence is complete and checks pass. | Summarize evidence, update `.qc/phase-board.json`, and allow next phase. |
 | `revise` | A local fix is needed. | Identify smallest repair and loop back to builder/test/review. |
 | `block` | A requirement, approval, safety condition, or seam prevents progress. | Stop and report exact blocker. |
-| `accepted_with_risk` | User explicitly accepts incomplete verification. | Record risk, owner, deadline, and next required check. |
+| `accepted_with_risk` | User explicitly accepts incomplete verification. | Record human decision with risk, owner, deadline, rollback, and next required check before allowing next phase. |
+
+`accepted_with_risk` is a gate bypass. The controller must not self-approve it. The decision record should include `decision_id`, `phase_id`, `accepted_by`, `risk`, `impact`, `reason`, `owner`, `deadline`, `rollback`, and `follow_up`.
+
+## Final Gate State Update
+
+After `pass` or `accepted_with_risk`, update `.qc/phase-board.json` so durable state no longer says the phase is still open or pending.
+
+Minimum final fields:
+
+```json
+{
+  "current_phase_id": "<phase-id>",
+  "current_phase_status": "complete",
+  "latest_gate_decision": "pass",
+  "latest_gate_at": "<UTC timestamp>",
+  "next_phase_id": "<next-phase-id>",
+  "revise_attempts": 0,
+  "blocking_issues": []
+}
+```
+
+If the gate is `block`, set `current_phase_status` to `blocked`, keep `latest_gate_decision=block`, and list the blocker ids or summaries in `blocking_issues`.
 
 ## Revise Loop
 
@@ -332,18 +388,18 @@ attempt 3:
   either pass, block, or ask for accepted-risk approval
 ```
 
-The controller should block rather than keep looping when the same condition fails repeatedly.
+The controller should block rather than keep looping when the same condition fails repeatedly. Track `revise_attempts` in `.qc/phase-board.json`; after three failed attempts, block and ask for a human decision before continuing.
 
 ## Shared State Contract
 
 | Producer | Reads | Writes |
 | --- | --- | --- |
-| phase-controller | build plan, `.qc/phase-board.json`, role reports | gate summary, phase-board updates |
+| phase-controller | build plan, `.qc/phase-board.json`, role reports | gate summary, phase-board updates, decision-log entries when explicitly approved |
 | builder-agent | phase record, target code | `builder-notes.md`, implementation diff |
 | ponytail-adapter | phase scope, builder plan | `.qc/ponytail-events.jsonl` |
 | test-agent | target code, qc-config, builder notes | `test-report.md`, `.qc/test-results/<phase-id>.jsonl` |
 | reviewer-agent | implementation diff, tests, builder notes | `reviewer-report.md` |
-| compliance-agent | build plan, records, protected-zone rules | `compliance-report.md`, deviation/decision logs |
+| compliance-agent | build plan, records, protected-zone rules | `compliance-report.md`, deviation findings, decision-log review |
 | integration-agent | previous/current/next phase contracts | `seam-audit.md` |
 | release-agent | runtime/Docker/deploy evidence | `release-gate.md` |
 

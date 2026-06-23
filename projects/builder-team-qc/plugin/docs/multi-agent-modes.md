@@ -52,6 +52,13 @@ Explicit script tools
 
 The role skills are the stable org chart. The scripts are tools called by the controller to create records, not independent agents that take over control.
 
+Two hardening tool contracts are required before this process can be called fully deterministic:
+
+- `record_decision.py` or an equivalent controller step must append accepted-risk and approval records to `.qc/decision-log.jsonl`.
+- `record_gate_decision.py` or an equivalent controller step must update `.qc/phase-board.json` after the final gate.
+
+Until those helpers exist, the controller must write those records manually and report that the decision/gate transition was manually recorded.
+
 ## ADK Concept Mapping
 
 | ADK concept | Builder Team QC V01 equivalent |
@@ -59,8 +66,8 @@ The role skills are the stable org chart. The scripts are tools called by the co
 | `BaseAgent` | Codex skill contract. |
 | `LlmAgent` | Codex reasoning while acting under a role skill. |
 | `SequentialAgent` | The default phase loop order. |
-| `ParallelAgent` | Optional conceptual grouping for independent checks after build. |
-| `LoopAgent` | Revise loop until strict gate passes, blocks, or accepted risk is recorded. |
+| `ParallelAgent` | Logical fan-out for independent checks after build. In V01 this is sequential role execution, not runtime concurrency. |
+| `LoopAgent` | Bounded revise loop until strict gate passes, blocks, or accepted risk is recorded. Default cap: three failed revise attempts. |
 | Shared session state | Project-local `.qc/` files and JSONL logs. |
 | LLM-driven delegation | Codex choosing which role contract to apply based on phase state. |
 | Agent-as-a-tool | Helper scripts invoked by the controller. |
@@ -84,6 +91,7 @@ The normal run is sequential because phase evidence has dependencies.
 11. Run in-progress validation.
 12. Run strict gate validation before completion.
 13. Decide pass, revise, block, or accepted_with_risk.
+14. Record the final gate transition in `.qc/phase-board.json`.
 ```
 
 Command skeleton:
@@ -132,11 +140,20 @@ python scripts\validate_phase_record.py `
   --phase-id phase-001 `
   --scan-safety `
   --strict-gate
+
+# Add --release-phase when the phase touches runtime, Docker, APIs, deploy,
+# production debug, dependencies, sidecars, rollback, or release behavior.
+python scripts\validate_phase_record.py `
+  --root <target-project> `
+  --phase-id phase-001 `
+  --scan-safety `
+  --strict-gate `
+  --release-phase
 ```
 
 ## Parallel Flow
 
-ADK `ParallelAgent` is useful when checks do not depend on each other. Builder Team QC can mimic that after the builder has produced a candidate change.
+ADK `ParallelAgent` is useful when checks do not depend on each other. Builder Team QC mimics the join rule after the builder has produced a candidate change, but V01 does not execute true concurrent agents.
 
 Conceptual parallel set:
 
@@ -154,7 +171,7 @@ Join point:
   strict gate decides next action
 ```
 
-In V01, Codex may execute these as separate role passes rather than true runtime concurrency. The important control rule is the same as ADK parallel orchestration: all branches must join before the gate can pass.
+In V01, Codex executes these as separate role passes unless a future runtime adds real concurrency. The important control rule is the same as ADK parallel orchestration: all branches must join before the gate can pass.
 
 ## Loop Flow
 
@@ -162,14 +179,18 @@ ADK `LoopAgent` maps to the revise loop.
 
 ```text
 while strict gate does not pass:
+  if revise_attempts >= 3:
+    gate = block
+    stop and ask for human decision
   if blocker exists:
     gate = block
     stop
   if user explicitly accepts risk:
     gate = accepted_with_risk
-    record decision and stop
+    record decision-log entry and stop
   otherwise:
     gate = revise
+    increment revise_attempts
     builder fixes the smallest failing item
     tests/review/compliance/seam run again
     strict validation runs again
@@ -177,7 +198,7 @@ while strict gate does not pass:
 gate = pass only when required evidence is complete
 ```
 
-The loop is bounded by engineering judgment and user instructions. It should not hide repeated failures, keep retrying blindly, or claim completion when evidence is missing.
+The default loop cap is three failed revise attempts. A project may lower the cap in `.qc/qc-config.json`; raising it requires an explicit user decision. The controller should not hide repeated failures, keep retrying blindly, or claim completion when evidence is missing.
 
 ## Shared State
 
@@ -185,15 +206,15 @@ ADK shared session state is represented by `.qc/`.
 
 | State file | Shared meaning |
 | --- | --- |
-| `.qc/phase-board.json` | Current phase id, status, next phase, required evidence, latest gate. |
+| `.qc/phase-board.json` | Current phase id, status, next phase, release requirement, revise attempt count, required evidence, latest gate, and final gate timestamp. |
 | `.qc/phase-runs/<phase-id>/phase-record.md` | Phase plan, deliverables, evidence index, final gate notes. |
 | `.qc/phase-runs/<phase-id>/builder-notes.md` | Builder role output. |
 | `.qc/phase-runs/<phase-id>/reviewer-report.md` | Reviewer role output. |
 | `.qc/phase-runs/<phase-id>/test-report.md` | Human-readable test evidence. |
 | `.qc/test-results/<phase-id>.jsonl` | Machine-readable test events. |
 | `.qc/ponytail-events.jsonl` | Ponytail mode and minimal-code verdicts. |
-| `.qc/deviation-log.jsonl` | Deviations and accepted-risk metadata. |
-| `.qc/decision-log.jsonl` | User decisions, approvals, and gate overrides. |
+| `.qc/deviation-log.jsonl` | Deviations, blockers, and links to accepted-risk decision ids. |
+| `.qc/decision-log.jsonl` | Human decisions, approvals, accepted-risk records, owner, deadline, rollback, and follow-up commitments. |
 | `.qc/phase-runs/<phase-id>/seam-audit.md` | Previous/current/next compatibility evidence. |
 | `.qc/phase-runs/<phase-id>/release-gate.md` | Production debug, Docker/runtime, rollback, and no-secrets evidence. |
 
@@ -213,7 +234,7 @@ Examples:
 | Work touches a phase boundary, schema, config, migration, or handoff. | `integration-agent` |
 | The work touches protected zones, approvals, secrets, or plan deviation. | `compliance-agent` |
 
-The controller may choose the order, but it may not skip required evidence before completion.
+The controller may choose the order only when dependencies still hold. Ponytail must run after the builder candidate and before tests/review fan-out, and the controller may not skip required evidence before completion.
 
 ## Agent-As-A-Tool Vs Sub-Agent
 
@@ -235,12 +256,14 @@ The phase controller can return four outcomes:
 
 | Gate | Meaning |
 | --- | --- |
-| `pass` | Evidence is complete, required tests pass, safety scan passes, Ponytail verdict is pass, seams are complete, and release gate is complete when applicable. |
+| `pass` | Evidence is complete, required role verdicts are `pass`, at least one required non-skipped test passes, safety scan passes, Ponytail verdict is `pass`, seams are complete, release gate is complete when applicable, and the phase board is updated. |
 | `revise` | The phase is close, but a local repair is needed before completion. |
 | `block` | A missing requirement, approval, safety condition, seam issue, or failing check prevents progress. |
-| `accepted_with_risk` | The user explicitly accepts incomplete verification with impact, owner, and follow-up recorded. |
+| `accepted_with_risk` | The user explicitly accepts incomplete verification with impact, owner, rollback, deadline, and follow-up recorded in `.qc/decision-log.jsonl`. The controller must not self-approve it. |
 
 No next phase should start until the current gate allows it.
+
+Strict-gate validation should treat `Verdict: revise` and `Verdict: block` in required role reports as failures, not as completed evidence. Required tests that are only `skipped` also fail the gate unless a matching accepted-risk decision exists.
 
 ## Future ADK-Compatible Shape
 

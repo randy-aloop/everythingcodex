@@ -4,6 +4,8 @@ This diagram shows how `builder-team-qc` runs a phase-controlled multiagent Pony
 
 The important correction: `ponytail-adapter` is not owned by `test-agent`. Ponytail checks the builder output and contributes gate evidence for the controller, reviewer, and compliance roles. Tests run after Ponytail passes because testing an over-scoped or over-abstracted change is usually wasted work.
 
+V01 uses logical fan-out, not true concurrent agents. Codex executes each role pass sequentially unless a future runtime adds real concurrency.
+
 ## System View
 
 ```mermaid
@@ -15,7 +17,8 @@ flowchart TD
     PC --> PLAN["Read build plan"]
     PLAN --> INIT["Initialize .qc"]
     INIT --> START["Start phase record"]
-    START --> B["builder-agent creates candidate change"]
+    START --> META["Set release_required and max_revise_attempts"]
+    META --> B["builder-agent creates candidate change"]
 
     B --> PT["ponytail-adapter checks scope and minimal-code discipline"]
     PT --> PTG{"Ponytail verdict"}
@@ -40,15 +43,18 @@ flowchart TD
     RA --> JOIN
 
     JOIN --> V1["Validate in-progress"]
-    V1 --> V2["Validate strict gate"]
+    V1 --> V2["Validate strict gate, release-aware when required"]
     V2 --> GATE{"Gate decision"}
 
-    GATE -- "pass" --> NEXT["Allow next phase"]
-    GATE -- "revise" --> FIX["Fix smallest failing item"]
+    GATE -- "pass" --> BOARD["Record final phase-board transition"]
+    BOARD --> NEXT["Allow next phase"]
+    GATE -- "revise" --> CAP{"Revise attempts < 3?"}
+    CAP -- "yes" --> FIX["Fix smallest failing item"]
     FIX --> B
+    CAP -- "no" --> STOP
     GATE -- "block" --> STOP["Stop and report blocker"]
-    GATE -- "accepted_with_risk" --> RISK["Record risk decision"]
-    RISK --> NEXT
+    GATE -- "accepted_with_risk" --> RISK["Record human decision-log entry"]
+    RISK --> BOARD
 ```
 
 ## Evidence Responsibility View
@@ -74,6 +80,8 @@ flowchart LR
     CMP --> COMP["compliance-report.md"]
     I --> SEAM["seam-audit.md"]
     RA --> RELEASE["release-gate.md"]
+    PC --> DECISION["decision-log.jsonl when accepted risk"]
+    PC --> BOARD["phase-board.json final gate"]
 
     PONY --> STRICT["strict gate"]
     TESTS --> STRICT
@@ -81,9 +89,13 @@ flowchart LR
     COMP --> STRICT
     SEAM --> STRICT
     RELEASE --> STRICT
+    DECISION --> STRICT
+    STRICT --> BOARD
 
     STRICT --> OUT{"pass / revise / block / accepted_with_risk"}
 ```
+
+Strict gate requires `pass` verdicts for required role reports. `revise`, `block`, missing verdicts, only skipped required tests, or release phases with `release-gate.md` still `not_applicable` must not pass without a matching human accepted-risk record.
 
 ## Shared State View
 
@@ -117,6 +129,8 @@ flowchart LR
     C --> DEC
     I --> PHASE
     RA --> PHASE
+    PC --> BOARD
+    PC --> DEC
 
     BOARD --> PC["phase-controller"]
     PHASE --> PC
@@ -129,13 +143,14 @@ flowchart LR
     PONY --> C
 
     PC --> G{"strict gate"}
+    G --> BOARD
 ```
 
 ## ADK-Style Pattern View
 
 ```mermaid
 flowchart TD
-    ROOT["Root controller: phase-controller"] --> LOOP["LoopAgent pattern: revise until gate resolves"]
+    ROOT["Root controller: phase-controller"] --> LOOP["LoopAgent pattern: bounded revise loop"]
     LOOP --> SEQ["SequentialAgent pattern: phase pipeline"]
 
     SEQ --> OPEN["Open phase"]
@@ -143,7 +158,7 @@ flowchart TD
     BUILD --> PONY["Ponytail minimal-code gate"]
     PONY --> PASS{"Ponytail pass?"}
 
-    PASS -- "yes" --> PAR["ParallelAgent pattern: independent evidence checks"]
+    PASS -- "yes" --> PAR["Logical fan-out: sequential in V01"]
     PASS -- "no" --> GATE["Strict gate validator"]
 
     subgraph CHECKS["Evidence checks"]
@@ -168,5 +183,7 @@ flowchart TD
 
     GATE --> GPASS{"Phase pass?"}
     GPASS -- "yes" --> DONE["Complete phase"]
-    GPASS -- "no" --> LOOP
+    GPASS -- "no" --> CAP{"Attempts < 3?"}
+    CAP -- "yes" --> LOOP
+    CAP -- "no" --> BLOCK["Block or require human accepted-risk decision"]
 ```
