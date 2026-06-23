@@ -89,7 +89,9 @@ The normal run is sequential because phase evidence has dependencies.
 Command skeleton:
 
 ```powershell
-cd D:\Workhorse\01_PRODUCTS\Skills-Creation-Test-Install\06_agent-work\codex\builder-teams-multiagent-ponytail\builder-team-qc
+# Project source:
+# https://github.com/randy-aloop/everythingcodex/tree/main/projects/builder-team-qc/plugin
+cd <local-clone>/projects/builder-team-qc/plugin
 
 python scripts\init_qc.py --root <target-project>
 
