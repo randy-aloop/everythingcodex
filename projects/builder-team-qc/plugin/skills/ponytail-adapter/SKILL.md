@@ -7,6 +7,10 @@ description: Apply safe Ponytail minimal-code discipline inside builder-team-qc 
 
 Use Ponytail as instruction discipline by default.
 
+## Attribution
+
+This adapter credits [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail), the MIT-licensed Ponytail project by Dietrich Gebert. Builder Team QC does not vendor or run upstream Ponytail by default; it applies a local checklist unless upstream hooks are explicitly reviewed, enabled, and recorded.
+
 ## Modes
 
 - `task-scoped`: apply Ponytail rules for this task only.

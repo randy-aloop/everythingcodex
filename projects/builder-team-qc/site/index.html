@@ -1012,6 +1012,7 @@
       <section id="ponytail">
         <h2>Ponytail is a gate, not a test helper</h2>
         <p>Ponytail is the project code name for the minimal-code discipline checklist used by Builder Team QC. In V01, it is an instruction/checklist adapter, not a trusted external runtime or autonomous hook system.</p>
+        <p>Credit: the Ponytail discipline in this project credits <a href="https://github.com/DietrichGebert/ponytail">DietrichGebert/ponytail</a>, the MIT-licensed Ponytail project by Dietrich Gebert. Builder Team QC does not vendor or run upstream Ponytail by default; it uses a local checklist unless upstream hooks are explicitly reviewed, enabled, and recorded.</p>
         <p>The Ponytail adapter checks whether the builder output obeys the minimal-code discipline: YAGNI, standard library first, existing project tools before new dependencies, and no unnecessary abstraction. If it passes, the evidence checks fan out. If it revises or blocks, the controller should stop or loop back before spending time on deeper validation.</p>
 
         <div class="callout">

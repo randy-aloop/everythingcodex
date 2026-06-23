@@ -4,6 +4,10 @@ Builder Team QC is a local Codex plugin/process for phase-controlled multi-agent
 
 It turns a normal Codex build into an evidence-first builder-team workflow with stable role contracts, `.qc` phase records, Ponytail minimal-code checks, seam audits, test evidence, compliance review, and strict gate validation.
 
+## Attribution
+
+Ponytail credit: the Builder Team QC `ponytail-adapter` credits [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail), the MIT-licensed Ponytail project by Dietrich Gebert. Builder Team QC does not vendor or run upstream Ponytail by default; V01 uses a local instruction/checklist adapter unless upstream hooks are explicitly reviewed, enabled, and recorded.
+
 ## Project Status
 
 | Field | Value |

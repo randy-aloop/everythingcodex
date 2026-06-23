@@ -6,6 +6,10 @@ V01 is intentionally local and evidence-first. It borrows the useful orchestrati
 
 For renderable diagrams of this flow, see `docs/orchestration-diagram.md`.
 
+## Attribution
+
+The Ponytail discipline referenced here credits [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail), the MIT-licensed Ponytail project by Dietrich Gebert. Builder Team QC does not vendor or run upstream Ponytail by default; V01 uses a local instruction/checklist adapter unless upstream hooks are explicitly reviewed, enabled, and recorded.
+
 ## Core Principle
 
 One phase is the unit of control.

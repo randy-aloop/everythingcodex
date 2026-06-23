@@ -20,6 +20,10 @@ Builder Team QC coordinates Codex software builds through a local phase-gated mu
 
 The system uses role skills as permanent sub-agent contracts, scripts as explicit tools, and `.qc/` as shared session state. The phase controller owns the gate and does not advance until required evidence is present.
 
+## Attribution
+
+Ponytail credit: the `ponytail-adapter` credits [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail), the MIT-licensed Ponytail project by Dietrich Gebert. Builder Team QC uses Ponytail as a local minimal-code discipline/checklist by default and does not vendor or run upstream Ponytail hooks unless they are explicitly reviewed, enabled, and recorded.
+
 ## Current Package Map
 
 ```text
