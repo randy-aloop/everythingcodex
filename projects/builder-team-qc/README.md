@@ -1,10 +1,10 @@
-# Builder Team QC
+# Building Collaborative Codex: A Developer's Guide to Builder-Team Multi-Agent Systems
 
-**Building Collaborative Codex: a local builder-team multi-agent system with phase gates, role contracts, Ponytail minimal-code discipline, and durable `.qc` evidence.**
+**Builder Team QC** is a local builder-team multi-agent system with phase gates, role contracts, Ponytail minimal-code discipline, and durable `.qc` evidence.
 
-Builder Team QC is a local Codex plugin/process for phase-controlled multi-agent software builds. It turns a normal Codex build into an evidence-first builder-team workflow with stable role contracts, `.qc` phase records, Ponytail minimal-code checks, seam audits, test evidence, compliance review, and strict gate validation.
+A practical guide to the `builder-team-qc` process: how Codex can coordinate builder, reviewer, test, compliance, integration, release, and Ponytail roles without handing control to remote services or hidden automation.
 
-This README is the GitHub-rendered presentation for the project. The HTML page under [`site/index.html`](site/index.html) is kept as an optional standalone browser artifact, but GitHub shows HTML as source code in the repository view.
+This README is the GitHub-rendered version of the local site presentation. The HTML page under [`site/index.html`](site/index.html) is kept as an optional standalone browser artifact, but GitHub shows HTML as source code in the repository view.
 
 ## Project Status
 
