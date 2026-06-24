@@ -6,7 +6,9 @@ Everything Codex is a public index for reusable Codex workflows, plugins, build-
 
 | Project | Status | Description |
 | --- | --- | --- |
-| [Builder Team QC](projects/builder-team-qc/README.md) | `v0.1.0-planning` | Local, phase-controlled multi-agent builder process for Codex with Ponytail minimal-code gates, `.qc` evidence records, role contracts, and strict phase validation. |
+| [Builder Team QC](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) | `v0.1.0-planning` | Local, phase-controlled multi-agent builder process for Codex with Ponytail minimal-code gates, `.qc` evidence records, role contracts, and strict phase validation. |
+
+Builder Team QC now lives on the standalone [`Codex-builder-team-multiagents`](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) branch. The `main` branch keeps the repository description and project index.
 
 ## Repository Purpose
 
@@ -35,7 +37,7 @@ Unless a project explicitly says otherwise, Everything Codex projects default to
 
 Repository version: `0.1.0`
 
-Project versions are tracked inside each project folder with a local `VERSION` file and `project.json` metadata.
+Project versions are tracked inside each project branch or folder with a local `VERSION` file and `project.json` metadata.
 
 ## Master Index
 

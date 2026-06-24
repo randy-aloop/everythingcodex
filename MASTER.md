@@ -23,21 +23,16 @@ This file is the canonical map for the repository.
   LICENSE
   projects/
     builder-team-qc/
-      README.md
-      MASTER.md
-      VERSION
-      project.json
-      STRUCTURE.md
-      CHANGELOG.md
-      plugin/
-      site/
+      README.md  # pointer to standalone branch
 ```
 
 ## Projects
 
 ### Builder Team QC
 
-Path: `projects/builder-team-qc/`
+Branch: [`Codex-builder-team-multiagents`](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents)
+
+Main pointer: `projects/builder-team-qc/README.md`
 
 Description: local phase-controlled multi-agent builder system for Codex. It coordinates builder, reviewer, test, compliance, integration, release, and Ponytail roles through `.qc` evidence records and strict phase gates.
 
@@ -45,12 +40,12 @@ Status: `v0.1.0-planning`
 
 Primary files:
 
-- [Project README](projects/builder-team-qc/README.md)
-- [Project master file](projects/builder-team-qc/MASTER.md)
-- [Project structure](projects/builder-team-qc/STRUCTURE.md)
-- [Version metadata](projects/builder-team-qc/project.json)
-- [Static article page](projects/builder-team-qc/site/index.html)
-- [Codex plugin package](projects/builder-team-qc/plugin/)
+- [Project README](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/README.md)
+- [Project master file](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/MASTER.md)
+- [Project structure](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/STRUCTURE.md)
+- [Version metadata](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/project.json)
+- [Static article page](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/site/index.html)
+- [Codex plugin package](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents/plugin)
 
 ## Promotion Rules
 
