@@ -1,5 +1,5 @@
 name: Deploy Builder Team QC Pages
-# Publishes the Builder Team QC visual site at /builder-team-qc/.
+# Publishes the latest Builder Team QC visual site at /builder-team-qc/.
 
 on:
   push:
