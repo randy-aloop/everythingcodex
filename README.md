@@ -8,7 +8,7 @@ Builder Team QC solves that by breaking a build into auditable phases. Each phas
 
 V01 is intentionally local-first. It runs as a single Codex-controlled workflow, not remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
 
-This README is the GitHub-rendered version of the local site presentation. The HTML page under [`site/index.html`](site/index.html) is kept as an optional standalone browser artifact, but GitHub shows HTML as source code in the repository view.
+Visual site: [https://randy-aloop.github.io/everythingcodex/builder-team-qc/](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
 
 ## Project Status
 
