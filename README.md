@@ -354,11 +354,50 @@ Command-level scripts:
 | `validate_phase_record.py` | Validate phase evidence and strict gate state. |
 | `summarize_phase.py` | Summarize current phase records. |
 
+## Dry Run And Test Report
+
+Latest detailed report: [`plugin/docs/agent-dry-run-and-test-report.md`](plugin/docs/agent-dry-run-and-test-report.md)
+
+| Area | Result |
+| --- | --- |
+| Multiagent phase loop | Pass |
+| Builder-agent dry run | Pass |
+| Builder-agent stress test | Pass |
+| Builder scope audit gate | Pass |
+| Ponytail gate enforcement | Pass |
+| Stop/debug/log/correct workflow | Pass as Codex-controller workflow |
+| Script-level interactive ask | Not implemented in scripts |
+
+Dry-run proof summary:
+
+| Proof Run | Evidence Result |
+| --- | --- |
+| Full multiagent phase loop | 13 phases executed, 13 final strict safety gates passed, 0 unexpected unresolved failures. |
+| Builder-agent current stress test | 5 builder phases executed, 5 final strict gates passed, 4 expected stop/failure checkpoints corrected. |
+| Builder scope audit gate | Unexpected file creation was caught, corrected, and strict-gate enforcement passed. |
+| Ponytail gate proof | `revise` verdict failed strict validation; later `pass` verdict allowed the gate to pass. |
+
+What the tests prove:
+
+- Required role evidence is enforced before phase completion.
+- The latest Ponytail event must be `pass`.
+- Required test evidence cannot be skipped.
+- Builder scope audit can block unexpected files, dependency creep, and doc-only drift.
+- Safety blockers stop the gate while non-blocking policy/reference findings can remain warnings.
+- Corrected phases can rerun and pass, with deviations and stop reports recorded.
+
+Current V01 boundaries:
+
+- Role passes are sequential under Codex control, not true concurrent remote agents.
+- Script-level interactive prompts are not implemented.
+- `record_decision.py`, `record_gate_decision.py`, and automated changed-files/diff helpers remain planned strengthening work.
+
 ## Project Files
 
 | Path | Purpose |
 | --- | --- |
 | [`plugin/`](plugin/) | Codex plugin package with skills, scripts, docs, and templates. |
+| [`plugin/docs/agent-dry-run-and-test-report.md`](plugin/docs/agent-dry-run-and-test-report.md) | Agent dry-run, stress-test, Ponytail gate, and self-correction results. |
 | [`plugin/docs/phase-by-phase-run-plan.md`](plugin/docs/phase-by-phase-run-plan.md) | Detailed latest phase-by-phase runbook. |
 | [`plugin/docs/orchestration-notes.md`](plugin/docs/orchestration-notes.md) | Operational sequence and safety defaults. |
 | [`plugin/docs/orchestration-diagram.md`](plugin/docs/orchestration-diagram.md) | Mermaid diagrams for system/state/pattern views. |
