@@ -10,7 +10,7 @@ This README is the GitHub-rendered version of the local site presentation. The H
 
 | Field | Value |
 | --- | --- |
-| Version | `0.1.0-planning` |
+| Version | `0.1.0-prototype` |
 | Package type | Codex plugin/process |
 | Runtime mode | Local-only V01 |
 | Primary controller | `phase-controller` |
@@ -430,4 +430,4 @@ Until those exist, the controller must write those records manually and disclose
 
 ## Version
 
-Current project version: `0.1.0-planning`
+Current project version: `0.1.0-prototype`

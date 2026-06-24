@@ -48,6 +48,7 @@
 | Version | Target |
 | --- | --- |
 | `0.1.0-planning` | Local package and docs are organized. |
+| `0.1.0-prototype` | Branch-installable prototype with installer, dry-run/test report, and build-plan authoring guide. |
 | `0.2.0-trial` | Sample project demonstrates pass/revise/pass cycle. |
 | `0.3.0-plugin-mvp` | Plugin ready for repeated local use. |
 | `1.0.0` | Stable reusable workflow with validation and trial evidence. |
