@@ -1,7 +1,7 @@
 # Builder Team QC Folder Structure
 
 ```text
-projects/builder-team-qc/
+./
   README.md
   MASTER.md
   VERSION

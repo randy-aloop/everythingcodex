@@ -118,8 +118,8 @@ Command skeleton:
 
 ```powershell
 # Project source:
-# https://github.com/randy-aloop/everythingcodex/tree/main/projects/builder-team-qc/plugin
-cd <local-clone>/projects/builder-team-qc/plugin
+# https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents/plugin
+cd <builder-team-qc-clone>/plugin
 
 python scripts\init_qc.py --root <target-project>
 
