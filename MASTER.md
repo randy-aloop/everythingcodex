@@ -34,7 +34,11 @@ Branch: [`Codex-builder-team-multiagents`](https://github.com/randy-aloop/everyt
 
 Main pointer: `projects/builder-team-qc/README.md`
 
-Description: local phase-controlled multi-agent builder system for Codex. It coordinates builder, reviewer, test, compliance, integration, release, and Ponytail roles through `.qc` evidence records and strict phase gates.
+Description: Builder Team QC is a local, phase-controlled multi-agent prototype for Codex that helps make builds easier to trust. It was built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools.
+
+The system breaks a build into auditable phases. Each phase uses role skills, script tools, Ponytail minimal-code checks, and `.qc` evidence records to track scoped changes, tests, reviews, compliance checks, seam audits, release gates, and strict validation.
+
+V01 is intentionally local-first. It runs as a single Codex-controlled workflow, not remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
 
 Status: `v0.1.0-prototype`
 
