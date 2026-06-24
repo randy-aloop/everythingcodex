@@ -231,6 +231,14 @@ Builder Team QC is local-first by default:
 - no public tunnel or exposed server port by default
 - no global install requirement for V01
 
+## Build Plan Authoring
+
+Before using Builder Team QC, write the build plan as phase contracts, not as a broad idea document. Each phase should tell the builder team what files may change, what behavior must exist, what proof must be recorded, when to stop, and what the next phase can rely on.
+
+Use this guide when preparing a project for the builder team:
+
+[`plugin/docs/build-plan-authoring-guide.md`](plugin/docs/build-plan-authoring-guide.md)
+
 ## Installation
 
 Use the project branch directly. This installs from a local clone of the branch; it does not download remote scripts at runtime, store secrets, open public ports, or perform a global Codex install.
@@ -398,6 +406,7 @@ Current V01 boundaries:
 | --- | --- |
 | [`plugin/`](plugin/) | Codex plugin package with skills, scripts, docs, and templates. |
 | [`plugin/docs/agent-dry-run-and-test-report.md`](plugin/docs/agent-dry-run-and-test-report.md) | Agent dry-run, stress-test, Ponytail gate, and self-correction results. |
+| [`plugin/docs/build-plan-authoring-guide.md`](plugin/docs/build-plan-authoring-guide.md) | Short authoring standard for writing phase contracts that Builder Team QC can enforce. |
 | [`plugin/docs/phase-by-phase-run-plan.md`](plugin/docs/phase-by-phase-run-plan.md) | Detailed latest phase-by-phase runbook. |
 | [`plugin/docs/orchestration-notes.md`](plugin/docs/orchestration-notes.md) | Operational sequence and safety defaults. |
 | [`plugin/docs/orchestration-diagram.md`](plugin/docs/orchestration-diagram.md) | Mermaid diagrams for system/state/pattern views. |
