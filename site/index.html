@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Building Collaborative Codex: From Non-Coder to Developer</title>
-  <meta name="description" content="A non-coder-to-developer guide to the builder-team-qc multi-agent process for Codex: hierarchy, workflow orchestration, Ponytail checks, .qc shared state, and strict phase gates.">
+  <title>Building Collaborative Codex: Builder-Team QC Multi-Agent System</title>
+  <meta name="description" content="A detailed guide to the builder-team-qc multi-agent process for Codex: ADK-style hierarchy, workflow orchestration, Ponytail checks, .qc shared state, deterministic phase gates, and local-only execution.">
   <style>
     :root {
       color-scheme: light;
@@ -326,6 +326,122 @@
       margin: 16px 0 0;
       color: var(--muted);
       font-size: 0.92rem;
+    }
+
+    .flow-board {
+      display: grid;
+      gap: 18px;
+      padding: 4px;
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) 34px minmax(130px, 1fr) 34px minmax(130px, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .flow-card {
+      min-height: 108px;
+      padding: 16px;
+      border: 1px solid #d8dee9;
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(17, 24, 39, 0.05);
+    }
+
+    .flow-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #202124;
+      font-size: 0.96rem;
+      line-height: 1.25;
+    }
+
+    .flow-card span {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.42;
+    }
+
+    .flow-card.controller {
+      border-top: 4px solid var(--blue);
+    }
+
+    .flow-card.builder {
+      border-top: 4px solid var(--green);
+    }
+
+    .flow-card.ponytail {
+      border-top: 4px solid var(--yellow);
+    }
+
+    .flow-card.gate {
+      border-top: 4px solid var(--red);
+    }
+
+    .flow-arrow {
+      display: grid;
+      place-items: center;
+      color: #6b7280;
+      font-weight: 800;
+    }
+
+    .qc-bus {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 16px;
+      border: 1px dashed #9bb7e8;
+      border-radius: var(--radius);
+      background: #f8fbff;
+    }
+
+    .qc-bus strong {
+      color: var(--blue);
+    }
+
+    .qc-bus span {
+      color: #3c4043;
+      font-size: 0.92rem;
+    }
+
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .evidence-card {
+      min-height: 100px;
+      padding: 14px;
+      border: 1px solid #dde3ec;
+      border-radius: var(--radius);
+      background: #ffffff;
+    }
+
+    .evidence-card strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #202124;
+      font-size: 0.9rem;
+    }
+
+    .evidence-card span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .join-strip {
+      padding: 13px 16px;
+      border: 1px solid #d8eee5;
+      border-radius: var(--radius);
+      background: #f4fbf7;
+      color: #174d2a;
+      font-weight: 700;
+      text-align: center;
     }
 
     .quote {
@@ -677,9 +793,20 @@
 
       .pipeline,
       .fanout,
+      .flow-row,
+      .evidence-grid,
       .three,
       .state-grid,
       .resources {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-arrow {
+        min-height: 16px;
+        transform: rotate(90deg);
+      }
+
+      .qc-bus {
         grid-template-columns: 1fr;
       }
 
@@ -769,13 +896,13 @@
 
     <article>
       <p class="section-label">Developers and Practitioners</p>
-      <h1>Building Collaborative Codex: From Non-Coder to Developer With Builder-Team Multi-Agent Systems</h1>
-      <p class="lede">A practical guide to the <code>builder-team-qc</code> process: how Codex can coordinate builder, reviewer, test, compliance, integration, release, and Ponytail roles without handing control to remote services or hidden automation.</p>
+      <h1>Building Collaborative Codex: Builder-Team QC Multi-Agent System</h1>
+      <p class="lede">A practical guide to the <code>builder-team-qc</code> process: how Codex coordinates builder, Ponytail, test, reviewer, compliance, integration, and release roles while keeping execution local, evidence-backed, and gate-controlled.</p>
 
       <div class="meta" aria-label="Article metadata">
         <span><b>Prepared for:</b> Workhorse Codex projects</span>
-        <span><b>Updated:</b> June 23, 2026</span>
-        <span><b>Mode:</b> local-only V01</span>
+        <span><b>Updated:</b> June 24, 2026</span>
+        <span><b>Mode:</b> local-only V01 with V02 orchestration notes</span>
       </div>
 
       <details class="mobile-toc">
@@ -791,38 +918,59 @@
         <a href="#resources">Resources</a>
       </details>
 
-      <section class="hero-visual" aria-label="Builder Team QC pipeline diagram">
-        <h2 class="visually-hidden">Builder Team QC phase flow</h2>
-        <div class="pipeline">
-          <div class="node">
-            <div class="node-title">phase-controller</div>
-            <p>Reads the plan, opens the phase record, and owns the gate.</p>
+      <section class="hero-visual" aria-label="Builder Team QC control-flow diagram">
+        <h2 class="visually-hidden">Builder Team QC phase control flow</h2>
+        <div class="flow-board">
+          <div class="flow-row" aria-label="Main phase sequence">
+            <div class="flow-card controller">
+              <strong>1. phase-controller</strong>
+              <span>Reads the build plan, opens or resumes the phase record, and owns the final gate.</span>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">-&gt;</div>
+            <div class="flow-card builder">
+              <strong>2. builder-agent</strong>
+              <span>Implements the smallest correct change for the current phase only.</span>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">-&gt;</div>
+            <div class="flow-card ponytail">
+              <strong>3. ponytail-adapter</strong>
+              <span>Runs the minimal-code discipline gate before deeper evidence checks.</span>
+            </div>
           </div>
-          <div class="node green">
-            <div class="node-title">builder-agent</div>
-            <p>Implements the smallest correct phase change.</p>
+
+          <div class="qc-bus">
+            <strong>.qc shared state</strong>
+            <span>Every role reads and writes durable evidence: phase record, changed files, test events, Ponytail verdicts, deviations, decisions, seam audits, and gate summary.</span>
           </div>
-          <div class="node yellow">
-            <div class="node-title">ponytail-adapter</div>
-            <p>Checks scope, YAGNI, dependencies, and abstraction discipline.</p>
+
+          <div class="evidence-grid" aria-label="Evidence fan-out checks">
+            <div class="evidence-card"><strong>test-agent</strong><span>Runs concrete checks and records command, status, and exit code.</span></div>
+            <div class="evidence-card"><strong>reviewer-agent</strong><span>Checks architecture fit, minimal code, and maintainability.</span></div>
+            <div class="evidence-card"><strong>compliance-agent</strong><span>Verifies build-plan adherence, protected zones, and required records.</span></div>
+            <div class="evidence-card"><strong>integration-agent</strong><span>Audits previous, current, and next phase seams.</span></div>
+            <div class="evidence-card"><strong>release-agent</strong><span>Checks runtime, Docker, debug, rollback, and no-secrets readiness when applicable.</span></div>
           </div>
-          <div class="node violet">
-            <div class="node-title">evidence fan-out</div>
-            <p>Review, tests, compliance, seams, and release checks join.</p>
-          </div>
-          <div class="node red">
-            <div class="node-title">strict gate</div>
-            <p>Pass, revise, block, or accepted risk. No proof, no pass.</p>
-          </div>
-          <div class="fanout" aria-label="Evidence checks">
-            <div class="check">test-agent<br>records runnable proof</div>
-            <div class="check">reviewer-agent<br>checks fit and minimal code</div>
-            <div class="check">compliance-agent<br>checks plan and safety</div>
-            <div class="check">integration-agent<br>audits phase seams</div>
-            <div class="check">release-agent<br>checks runtime readiness</div>
+
+          <div class="join-strip">Join point: the controller reads every evidence branch before the strict gate can pass.</div>
+
+          <div class="flow-row" aria-label="Gate loop sequence">
+            <div class="flow-card gate">
+              <strong>4. strict gate</strong>
+              <span><code>validate_phase_record.py --strict-gate</code> checks durable evidence and safety conditions.</span>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">-&gt;</div>
+            <div class="flow-card">
+              <strong>5. gate decision</strong>
+              <span>Return <code>pass</code>, <code>revise</code>, <code>block</code>, or <code>accepted_with_risk</code>.</span>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">-&gt;</div>
+            <div class="flow-card">
+              <strong>6. phase-board update</strong>
+              <span>Record final status, next phase, accepted risks, and summary for later audit.</span>
+            </div>
           </div>
         </div>
-        <p class="hero-note">Ponytail is not a test-agent helper. It is a phase-scope gate that feeds reviewer, compliance, and the final controller decision.</p>
+        <p class="hero-note">In V01, Codex executes these role passes in one local conversation. The fan-out is ADK-style orchestration, not true concurrent runtime execution.</p>
       </section>
 
       <section id="what">
@@ -847,6 +995,8 @@
             <p>The <code>.qc/</code> folder records phase runs, tests, deviations, decisions, seam audits, Ponytail checks, and gate outcomes.</p>
           </div>
         </div>
+
+        <div class="quote">This page describes the local Codex implementation, not a deployed Google ADK service. It borrows ADK's mental model: hierarchy for structure, workflow patterns for control, shared state for communication, and tools for deterministic actions.</div>
       </section>
 
       <section id="agent-types">
@@ -877,6 +1027,46 @@
                 <td>Custom logic</td>
                 <td>Local scripts under <code>scripts/</code></td>
                 <td>Create <code>.qc</code>, start phase records, record events, validate gates, and summarize phase state.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>ADK concept mapping</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ADK concept</th>
+                <th>Builder Team QC V01 equivalent</th>
+                <th>Important difference</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>SequentialAgent</code></td>
+                <td>Default phase pipeline: plan, start, build, Ponytail, evidence, gate.</td>
+                <td>Executed by Codex locally, not by an ADK runtime scheduler.</td>
+              </tr>
+              <tr>
+                <td><code>ParallelAgent</code></td>
+                <td>Logical evidence fan-out: test, review, compliance, integration, release.</td>
+                <td>Sequential in V01. The join rule is real; concurrency is not.</td>
+              </tr>
+              <tr>
+                <td><code>LoopAgent</code></td>
+                <td>Bounded revise loop after strict-gate failure.</td>
+                <td>Default cap is three failed revise attempts before blocking.</td>
+              </tr>
+              <tr>
+                <td>Shared session state</td>
+                <td>Project-local <code>.qc/</code> records.</td>
+                <td>Durable files survive the chat and can be audited later.</td>
+              </tr>
+              <tr>
+                <td>Agent-as-a-tool</td>
+                <td>Helper scripts such as <code>record_test_result.py</code>.</td>
+                <td>Scripts do not own the phase; they only record or validate evidence.</td>
               </tr>
             </tbody>
           </table>
@@ -957,6 +1147,19 @@
         </div>
 
         <div class="quote">The hard stop is the deterministic validator: <code>validate_phase_record.py --strict-gate</code> must exit cleanly for evidence completion. Model-authored role reports are useful review evidence, but executable checks and validator exit codes carry more weight.</div>
+
+        <h3>Detailed phase run path</h3>
+        <p>A normal phase run follows this order so each later check has the evidence it needs:</p>
+        <ol>
+          <li>Read the build plan, current phase, prior phase output, and next phase expectations.</li>
+          <li>Initialize <code>.qc/</code> if it does not exist and start or resume the phase record.</li>
+          <li>Apply <code>builder-agent</code> to produce the smallest candidate change.</li>
+          <li>Persist changed-file and implementation evidence for later reviewers.</li>
+          <li>Run <code>ponytail-adapter</code> as a phase-scope minimal-code gate.</li>
+          <li>Run test, reviewer, compliance, integration, and release checks as required by the phase.</li>
+          <li>Run <code>validate_phase_record.py --scan-safety</code> during the phase and <code>--strict-gate</code> before completion.</li>
+          <li>Decide <code>pass</code>, <code>revise</code>, <code>block</code>, or <code>accepted_with_risk</code>, then update the phase board and gate summary.</li>
+        </ol>
 
         <h3>What is enforced by code?</h3>
         <div class="table-wrap">
@@ -1074,7 +1277,48 @@ Current phase: phase-001 - Scaffold local plugin
 Run the phase controller with Ponytail minimal-code checks,
 tests, seam audit, compliance review, and strict gate validation.</code></pre>
 
-        <p>For command-level operation, the key scripts are <code>init_qc.py</code>, <code>start_phase.py</code>, <code>record_ponytail_check.py</code>, <code>record_test_result.py</code>, <code>validate_phase_record.py</code>, and <code>summarize_phase.py</code>.</p>
+        <h3>Script-level control path</h3>
+        <p>For command-level operation, the key scripts are <code>init_qc.py</code>, <code>start_phase.py</code>, <code>record_ponytail_check.py</code>, <code>record_test_result.py</code>, <code>record_deviation.py</code>, <code>validate_phase_record.py</code>, and <code>summarize_phase.py</code>. They are explicit tools, not autonomous agents.</p>
+
+        <pre><code>cd plugin
+
+python scripts\init_qc.py --root &lt;target-project&gt;
+
+python scripts\start_phase.py ^
+  --root &lt;target-project&gt; ^
+  --phase-id phase-001 ^
+  --title "Phase title" ^
+  --next-phase-id phase-002 ^
+  --build-plan "path\to\build-plan.md"
+
+python scripts\record_ponytail_check.py ^
+  --root &lt;target-project&gt; ^
+  --phase-id phase-001 ^
+  --mode task-scoped ^
+  --yagni-check "No extra scope added" ^
+  --stdlib-check "Used existing tools where possible" ^
+  --dependency-check "No unnecessary dependency added" ^
+  --abstraction-check "No unnecessary abstraction added" ^
+  --minimum-code-verdict pass ^
+  --notes "Ponytail gate passed"
+
+python scripts\record_test_result.py ^
+  --root &lt;target-project&gt; ^
+  --phase-id phase-001 ^
+  --name smoke ^
+  --command "test command here" ^
+  --status pass ^
+  --exit-code 0 ^
+  --notes "Smoke check passed"
+
+python scripts\validate_phase_record.py ^
+  --root &lt;target-project&gt; ^
+  --phase-id phase-001 ^
+  --scan-safety ^
+  --strict-gate</code></pre>
+
+        <h3>What the final answer should report</h3>
+        <p>At the end of a phase, Codex should report the gate result, changed files, checks run, unresolved blockers, accepted risks if any, and the location of the phase evidence. A phase is not complete just because every role wrote prose; it is complete only when required evidence exists and the strict gate allows progress.</p>
       </section>
 
       <section id="resources">
@@ -1086,6 +1330,8 @@ tests, seam audit, compliance review, and strict gate validation.</code></pre>
           <a class="resource" href="../plugin/docs/phase-by-phase-run-plan.md">Phase-by-phase run plan<span>Detailed latest runbook from intake through final phase-board handoff.</span></a>
           <a class="resource" href="../plugin/docs/orchestration-diagram.md">Orchestration diagram<span>System, state, and ADK-style pattern views.</span></a>
           <a class="resource" href="../plugin/docs/multi-agent-modes.md">Multi-agent modes<span>Hierarchy, shared state, delegation, and tool boundaries.</span></a>
+          <a class="resource" href="../plugin/docs/single-run-vs-parallel-runtime.md">Single run vs parallel runtime<span>Explains the V01 single-Codex loop and future true parallel runtime options.</span></a>
+          <a class="resource" href="../plugin/docs/qc-record-schema.md">QC record schema<span>Detailed file contracts for phase runs, tests, deviations, decisions, and gates.</span></a>
           <a class="resource" href="../MASTER.md">Project master file<span>Canonical project map, role contracts, version policy, and promotion checklist.</span></a>
         </div>
       </section>
