@@ -36,7 +36,7 @@ Main pointer: `projects/builder-team-qc/README.md`
 
 Description: local phase-controlled multi-agent builder system for Codex. It coordinates builder, reviewer, test, compliance, integration, release, and Ponytail roles through `.qc` evidence records and strict phase gates.
 
-Status: `v0.1.0-planning`
+Status: `v0.1.0-prototype`
 
 Primary files:
 
