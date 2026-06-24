@@ -4,11 +4,9 @@ Everything Codex is a public index for reusable Codex workflows, plugins, build-
 
 ## Current Projects
 
-| Project | Status | Description |
-| --- | --- | --- |
-| [Builder Team QC](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) | `v0.1.0-planning` | Local, phase-controlled multi-agent builder process for Codex with Ponytail minimal-code gates, `.qc` evidence records, role contracts, and strict phase validation. |
-
-Builder Team QC now lives on the standalone [`Codex-builder-team-multiagents`](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) branch. The `main` branch keeps the repository description and project index.
+| Project | Status | Location | Description |
+| --- | --- | --- | --- |
+| [Builder Team QC](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) | `v0.1.0-planning` | [`Codex-builder-team-multiagents`](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) branch | Local, phase-controlled multi-agent builder process for Codex with Ponytail minimal-code gates, `.qc` evidence records, role contracts, and strict phase validation. |
 
 ## Repository Purpose
 
