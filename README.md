@@ -231,6 +231,95 @@ Builder Team QC is local-first by default:
 - no public tunnel or exposed server port by default
 - no global install requirement for V01
 
+## Installation
+
+Use the project branch directly. This installs from a local clone of the branch; it does not download remote scripts at runtime, store secrets, open public ports, or perform a global Codex install.
+
+Requirements: Git, PowerShell, and Python 3. If `python` is not available on your Windows PATH, pass `-Python py` or `-Python "<python-exe>"` to the installer.
+
+### 1. Clone The Builder Team QC Branch
+
+```powershell
+git clone --branch Codex-builder-team-multiagents --single-branch `
+  https://github.com/randy-aloop/everythingcodex.git builder-team-qc
+
+cd builder-team-qc
+```
+
+### 2. Run A Dry-Run Install
+
+Set the target project where `.qc/` and the project-local plugin copy should be created:
+
+```powershell
+$PluginRoot = "$PWD\plugin"
+$TargetRoot = "<target-project>"
+$BuildPlan = "$TargetRoot\build-plan.md"
+
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File "$PluginRoot\scripts\install-builder-team-qc.ps1" `
+  -TargetRoot $TargetRoot `
+  -StartPhase `
+  -PhaseId phase-000 `
+  -PhaseTitle 'Intake And Phase Selection' `
+  -NextPhaseId phase-001 `
+  -BuildPlan $BuildPlan `
+  -DryRun
+```
+
+### 3. Install Into The Target Project
+
+Run the same command without `-DryRun`:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File "$PluginRoot\scripts\install-builder-team-qc.ps1" `
+  -TargetRoot $TargetRoot `
+  -StartPhase `
+  -PhaseId phase-000 `
+  -PhaseTitle 'Intake And Phase Selection' `
+  -NextPhaseId phase-001 `
+  -BuildPlan $BuildPlan
+```
+
+The installer creates or updates:
+
+| Target path | Purpose |
+| --- | --- |
+| `$TargetRoot\.codex\plugins\builder-team-qc\` | Project-local plugin copy. |
+| `$TargetRoot\.qc\` | Evidence records, phase board, logs, and templates. |
+| `$TargetRoot\.qc\phases\phase-000\` | First phase record when `-StartPhase` is used. |
+
+Useful options:
+
+| Option | Use |
+| --- | --- |
+| `-DryRun` | Show planned actions without writing files. |
+| `-Python py` | Use the Windows Python launcher instead of `python`. |
+| `-SkipProjectPluginCopy` | Initialize `.qc/` without copying the plugin package. |
+| `-SkipQcInit` | Copy the plugin package without initializing `.qc/`. |
+| `-ForceTemplates` | Overwrite existing copied template files. |
+| `-PhaseId`, `-PhaseTitle`, `-NextPhaseId` | Start a specific phase record. |
+
+### Manual Fallback
+
+If PowerShell script execution is restricted, use the Python helpers directly from the clone:
+
+```powershell
+python plugin\scripts\init_qc.py --root $TargetRoot
+
+python plugin\scripts\start_phase.py `
+  --root $TargetRoot `
+  --phase-id phase-000 `
+  --title "Intake And Phase Selection" `
+  --next-phase-id phase-001 `
+  --build-plan $BuildPlan
+
+python plugin\scripts\validate_phase_record.py `
+  --root $TargetRoot `
+  --phase-id phase-000 `
+  --template-only
+```
+
 ## Quick Start
 
 Use this prompt from Codex in a target project:
@@ -256,6 +345,7 @@ Command-level scripts:
 
 | Script | Purpose |
 | --- | --- |
+| `install-builder-team-qc.ps1` | Clone-friendly PowerShell installer for project-local plugin copy, `.qc` initialization, and optional first phase start. |
 | `init_qc.py` | Create project-local `.qc` structure. |
 | `start_phase.py` | Open or resume a phase run. |
 | `record_ponytail_check.py` | Record minimal-code gate evidence. |
