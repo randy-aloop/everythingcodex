@@ -1,10 +1,12 @@
 # Builder Team QC: Phase-Gated Multi-Agent Workflow For Codex
 
-Builder Team QC is a local, phase-controlled multi-agent prototype for Codex. It coordinates role skills, script tools, Ponytail minimal-code checks, and .qc evidence records to make each build phase auditable before the next one starts.
+Builder Team QC helps make Codex builds easier to trust.
 
-V01 runs as a single Codex-controlled workflow, not as remote autonomous agents. The goal is controlled local orchestration: scoped builder changes, recorded tests, reviewer and compliance passes, seam audits, release gates, and strict validation without public tunnels, remote services, or hidden API access.
+It is a local, phase-controlled multi-agent prototype built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools. Codex can move fast, but fast builds need traceability. Without a clear process, it can be difficult to know what changed, what was installed, what was tested, and why a decision was made.
 
-[Codex-builder-team-multiagents](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents)
+Builder Team QC solves that by breaking a build into auditable phases. Each phase uses role skills, script tools, Ponytail minimal-code checks, and .qc evidence records to track scoped changes, tests, reviews, compliance checks, seam audits, release gates, and strict validation.
+
+V01 is intentionally local-first. It runs as a single Codex-controlled workflow, not remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
 
 This README is the GitHub-rendered version of the local site presentation. The HTML page under [`site/index.html`](site/index.html) is kept as an optional standalone browser artifact, but GitHub shows HTML as source code in the repository view.
 
