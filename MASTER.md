@@ -32,6 +32,8 @@ This file is the canonical map for the repository.
 
 Branch: [`Codex-builder-team-multiagents`](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents)
 
+Visual site: [`https://randy-aloop.github.io/everythingcodex/builder-team-qc/`](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
+
 Main pointer: `projects/builder-team-qc/README.md`
 
 Description: Builder Team QC is a local, phase-controlled multi-agent prototype for Codex that helps make builds easier to trust. It was built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools.
@@ -49,6 +51,7 @@ Primary files:
 - [Project structure](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/STRUCTURE.md)
 - [Version metadata](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/project.json)
 - [Static article page](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/site/index.html)
+- [Published visual site](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
 - [Codex plugin package](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents/plugin)
 
 ## Promotion Rules

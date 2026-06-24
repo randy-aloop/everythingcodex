@@ -1,0 +1,53 @@
+name: Deploy Builder Team QC Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-builder-team-qc-pages.yml"
+      - "README.md"
+      - "MASTER.md"
+      - "projects/builder-team-qc/README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy-builder-team-qc:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}builder-team-qc/
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Builder Team QC branch
+        uses: actions/checkout@v4
+        with:
+          ref: Codex-builder-team-multiagents
+
+      - name: Prepare Pages artifact
+        shell: bash
+        run: |
+          mkdir -p public/builder-team-qc
+          cp -R site/. public/builder-team-qc/
+          touch public/.nojekyll
+          test -f public/builder-team-qc/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

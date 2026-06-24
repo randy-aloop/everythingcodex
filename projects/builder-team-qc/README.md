@@ -4,6 +4,10 @@ Builder Team QC has moved from `main/projects/builder-team-qc` to its own standa
 
 [Codex-builder-team-multiagents](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents)
 
+Visual site:
+
+[https://randy-aloop.github.io/everythingcodex/builder-team-qc/](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
+
 ## Description
 
 Builder Team QC helps make Codex builds easier to trust.
