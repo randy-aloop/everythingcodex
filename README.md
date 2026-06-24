@@ -256,6 +256,8 @@ git clone --branch Codex-builder-team-multiagents --single-branch `
 cd builder-team-qc
 ```
 
+Cloning the branch gives you the Builder Team QC source folder. Codex does not automatically pick up the plugin from the clone by itself.
+
 ### 2. Run A Dry-Run Install
 
 Set the target project where `.qc/` and the project-local plugin copy should be created:
@@ -298,6 +300,19 @@ The installer creates or updates:
 | `$TargetRoot\.codex\plugins\builder-team-qc\` | Project-local plugin copy. |
 | `$TargetRoot\.qc\` | Evidence records, phase board, logs, and templates. |
 | `$TargetRoot\.qc\phases\phase-000\` | First phase record when `-StartPhase` is used. |
+
+This is still a project-local plugin/process package. It is not a guaranteed global Codex auto-load. A future global plugin install or registry-loading step can make that smoother, but V01 keeps the install local and explicit.
+
+### 4. Tell Codex To Use It
+
+After install, start Codex in the target project and ask for the workflow explicitly:
+
+```text
+Use builder-team-qc for this build.
+Target root: <target-project>
+Build plan: <build-plan-path>
+Run the phase-controller workflow.
+```
 
 Useful options:
 
