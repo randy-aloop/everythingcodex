@@ -40,6 +40,7 @@
     "plugin": "plugin/",
     "site": "site/index.html",
     "phase_by_phase_run_plan": "plugin/docs/phase-by-phase-run-plan.md",
+    "single_run_vs_parallel_runtime": "plugin/docs/single-run-vs-parallel-runtime.md",
     "master_file": "MASTER.md",
     "structure": "STRUCTURE.md",
     "changelog": "CHANGELOG.md"

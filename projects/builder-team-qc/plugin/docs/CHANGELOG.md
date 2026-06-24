@@ -11,6 +11,7 @@ Versioned documentation set:
 - `phase-loop.md`
 - `production-debug-gate.md`
 - `qc-record-schema.md`
+- `single-run-vs-parallel-runtime.md`
 
 Updates included:
 
@@ -19,3 +20,4 @@ Updates included:
 - Clarified current helper gaps versus target helper contracts.
 - Tightened strict-gate, accepted-risk, release-gate, and revise-loop rules.
 - Updated orchestration diagrams and quick-run references to match the V02 control model.
+- Added the single-run versus parallel-runtime explanation, including ADK verification notes and the Runtime V03 graph/dynamic workflow nuance.

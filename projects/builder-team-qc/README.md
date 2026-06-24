@@ -1,4 +1,4 @@
-# Building Collaborative Codex: A Developer's Guide to Builder-Team Multi-Agent Systems
+# Building Collaborative Codex: From Non-Coder to Developer With Builder-Team Multi-Agent Systems
 
 **Builder Team QC** is a local builder-team multi-agent system with phase gates, role contracts, Ponytail minimal-code discipline, and durable `.qc` evidence.
 
@@ -120,6 +120,24 @@ plan
 | Loop | Revise loop is capped at three failed attempts before block or human accepted-risk decision. |
 
 The hard stop is the deterministic validator: `validate_phase_record.py --strict-gate` must exit cleanly for evidence completion. Model-authored role reports are useful review evidence, but executable checks and validator exit codes carry more weight.
+
+## Single-Run Vs Parallel Runtime
+
+Builder Team QC Runtime V01 is **single-run multiagent**: one Codex runtime performs the builder-team roles one at a time. It is multiagent by role contract, not by process. Runtime V01 is not a live Google ADK runtime; it borrows ADK-style orchestration vocabulary while keeping execution local, visible, and file-auditable.
+
+The target is still parallel-friendly:
+
+```text
+sequential build
+parallel evidence checks
+sequential strict gate
+```
+
+The builder and Ponytail stages should remain sequential because they create and scope the candidate change. Test, review, compliance, integration, and release checks can become parallel evidence workers later, after the strict gate, evidence schema, file locking, attempt ids, candidate/diff ids, and deterministic join rules are strong enough.
+
+ADK alignment: `SequentialAgent` maps to ordered build control, `ParallelAgent` maps to concurrent evidence checks with explicit shared-state coordination, and `LoopAgent` maps to the bounded revise loop. For a future ADK 2.0+ implementation, graph or dynamic workflows should also be considered before committing to template workflow agents.
+
+Detailed note: [`plugin/docs/single-run-vs-parallel-runtime.md`](plugin/docs/single-run-vs-parallel-runtime.md)
 
 ## What Is Enforced By Code?
 
@@ -255,6 +273,7 @@ Command-level scripts:
 | [`plugin/docs/orchestration-notes.md`](plugin/docs/orchestration-notes.md) | Operational sequence and safety defaults. |
 | [`plugin/docs/orchestration-diagram.md`](plugin/docs/orchestration-diagram.md) | Mermaid diagrams for system/state/pattern views. |
 | [`plugin/docs/multi-agent-modes.md`](plugin/docs/multi-agent-modes.md) | ADK-style hierarchy, delegation, state, and tool mapping. |
+| [`plugin/docs/single-run-vs-parallel-runtime.md`](plugin/docs/single-run-vs-parallel-runtime.md) | Runtime V01 single-run model, V02 parallel controls, and ADK comparison. |
 | [`plugin/docs/qc-record-schema.md`](plugin/docs/qc-record-schema.md) | `.qc` record contract. |
 | [`site/index.html`](site/index.html) | Optional standalone static HTML page. |
 | [`MASTER.md`](MASTER.md) | Canonical project map. |
