@@ -9,7 +9,7 @@ This is the canonical project map for Builder Team QC.
 | Project name | Builder Team QC |
 | Package name | `builder-team-qc` |
 | Repository path | Branch root on `Codex-builder-team-multiagents` |
-| Version | `0.1.0-prototype` |
+| Version | `0.2.1-trial` |
 | Owner namespace | `randy-aloop/everythingcodex` |
 | Primary deliverable | Local Codex plugin/process |
 | Secondary deliverable | Static developer article page |
@@ -83,5 +83,6 @@ Use semantic-ish project versions:
 - `0.1.0-planning`: initial local docs and plugin package.
 - `0.1.0-prototype`: branch-installable prototype with installation guide, dry-run/test evidence, and build-plan authoring guide.
 - `0.2.0-trial`: sample project trial with pass/revise/pass cycle.
+- `0.2.1-trial`: installer package carrying V03.1 sync-to-code patch checks and recovery-pack validation.
 - `0.3.0-plugin-mvp`: plugin ready for repeated local use.
 - `1.0.0`: stable reusable workflow with documented promotion gates.

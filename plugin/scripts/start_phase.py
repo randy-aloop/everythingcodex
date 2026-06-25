@@ -13,16 +13,22 @@ def main() -> int:
     parser.add_argument("--next-phase-id", default="")
     parser.add_argument("--build-plan", default="")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--force", action="store_true", help="Override non-terminal phase-board guard.")
     args = parser.parse_args()
 
-    run_dir = start_phase(
-        root_path(args.root),
-        phase_id=args.phase_id,
-        title=args.title,
-        next_phase_id=args.next_phase_id,
-        build_plan=args.build_plan,
-        dry_run=args.dry_run,
-    )
+    try:
+        run_dir = start_phase(
+            root_path(args.root),
+            phase_id=args.phase_id,
+            title=args.title,
+            next_phase_id=args.next_phase_id,
+            build_plan=args.build_plan,
+            dry_run=args.dry_run,
+            force=args.force,
+        )
+    except RuntimeError as exc:
+        print(f"error: {exc}")
+        return 10
     print(run_dir)
     return 0
 

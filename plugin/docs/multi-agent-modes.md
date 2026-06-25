@@ -1,8 +1,8 @@
 # Multi-Agent Run Model
 
-Version: V02
-Updated: 2026-06-23
-Supersedes: V01
+Version: V03.1
+Updated: 2026-06-25
+Supersedes: V03
 
 Builder Team QC uses ADK-style orchestration ideas without depending on a live Google ADK runtime in V01.
 
@@ -52,20 +52,20 @@ Explicit script tools
   record_deviation.py
   validate_phase_record.py
   summarize_phase.py
-  record_decision.py, planned
-  record_gate_decision.py, planned
+  record_decision.py
+  record_gate_decision.py
 ```
 
 The role skills are the stable org chart. The scripts are tools called by the controller to create records, not independent agents that take over control.
 
-Two hardening tool contracts are required before this process can be called fully deterministic:
+Two hardening tool contracts make this process deterministic, and both are implemented:
 
-- `record_decision.py` or an equivalent controller step must append accepted-risk and approval records to `.qc/decision-log.jsonl`.
-- `record_gate_decision.py` or an equivalent controller step must update `.qc/phase-board.json` after the final gate.
+- `record_decision.py` appends accepted-risk and approval records to `.qc/decision-log.jsonl`.
+- `record_gate_decision.py` updates `.qc/phase-board.json`, writes `gate-summary.md`, and appends `.qc/gate-events.jsonl` after the final gate.
 
-Until those helpers exist, the controller must write those records manually and report that the decision/gate transition was manually recorded.
+Use these helpers instead of hand-editing decision or phase-board state.
 
-The same rule applies to fields that current helper scripts do not yet support, such as test `required`, test `attempt`, Ponytail `attempt`, Ponytail `mode_source`, deviation `issue_id`, and final gate summary output. Missing helper support is a current implementation gap, not permission to omit the evidence.
+The recorder scripts now support these fields: test `required` and `attempt`, Ponytail `attempt` and `mode_source`, deviation `issue_id` and `decision_id`, and final gate-summary output via `record_gate_decision.py`. The one artifact with no dedicated generator is the builder change evidence: `changed-files.json` and `implementation-diff.patch`, which the controller writes before the Ponytail step. Missing helper support is never permission to omit required evidence.
 
 ## Context Isolation
 
@@ -119,7 +119,7 @@ Command skeleton:
 ```powershell
 # Project source:
 # https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents/plugin
-cd <builder-team-qc-clone>/plugin
+cd <local-clone>/plugin
 
 python scripts\init_qc.py --root <target-project>
 
@@ -283,16 +283,16 @@ The phase controller can return four outcomes:
 
 | Gate | Meaning |
 | --- | --- |
-| `pass` | Evidence is complete, required role verdicts are `pass`, at least one required non-skipped test passes, safety scan passes, Ponytail verdict is `pass`, seams are complete, release gate is complete when applicable, and the phase board is updated. |
+| `pass` | Evidence is complete, required role verdicts are `pass`, at least one required test has status `pass`, safety scan passes, Ponytail verdict is `pass`, seams are complete, release gate is complete when applicable, and the phase board is updated. |
 | `revise` | The phase is close, but a local repair is needed before completion. |
 | `block` | A missing requirement, approval, safety condition, seam issue, or failing check prevents progress. |
 | `accepted_with_risk` | The user explicitly accepts incomplete verification with impact, owner, rollback, deadline, and follow-up recorded in `.qc/decision-log.jsonl`. The controller must not self-approve it. |
 
 No next phase should start until the current gate allows it.
 
-Strict-gate validation should treat missing verdicts, duplicate/conflicting verdicts, `Verdict: revise`, and `Verdict: block` in required role reports as failures, not as completed evidence. Required tests that are only `skipped` also fail the gate unless a matching accepted-risk decision exists. Open blocker issues in `.qc/issue-register.jsonl` block the gate.
+Strict-gate validation treats missing, duplicated, `unknown`, `pending`, `revise`, or `block` role verdicts as failures, not as completed evidence. A required test that is `skipped` fails validation, and at least one required test must pass. `accepted_with_risk` is a separate gate decision path after validation evidence is reviewed, not a validator-level exemption for skipped required tests. Open blocker issues in `.qc/issue-register.jsonl` block the gate.
 
-Confirmed current validator behavior: `validate_phase_record.py` currently returns `0` for success and `1` for errors. The target deterministic contract is richer: `0` pass, `10` strict-gate failure, `20` schema/config/invocation error, and `30` safety blocker. Until implemented, the controller must classify the observed `1` in `gate-summary.md`.
+Confirmed current validator behavior: `validate_phase_record.py` returns classified exit codes: `0` pass, `10` strict-gate failure, `20` schema/config/invocation error, and `30` safety blocker. It can emit machine-readable JSON with `schema_errors`, `gate_errors`, `safety_errors`, and `release_required`.
 
 ## Future ADK-Compatible Shape
 

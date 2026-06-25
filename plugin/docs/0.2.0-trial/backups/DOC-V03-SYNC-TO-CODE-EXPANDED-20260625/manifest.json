@@ -1,0 +1,52 @@
+{
+  "backup_id": "DOC-V03-SYNC-TO-CODE-EXPANDED-20260625",
+  "created": "2026-06-25",
+  "purpose": "Public recovery manifest for the V03.1 sync-to-code patch cleanup. Local file-copy payloads are intentionally not published because they can preserve machine-specific provenance.",
+  "source_project_root": "<local-source-builder-team-qc>",
+  "everythingcodex_repo": "https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents",
+  "everythingcodex_head": "a5b07d4b60b32764172275bcc6a570577d381ae7",
+  "current_patched_source_files": [
+    "docs/multi-agent-modes.md",
+    "docs/phase-loop.md",
+    "docs/qc-record-schema.md",
+    "docs/orchestration-notes.md",
+    "docs/CHANGELOG.md",
+    "docs/docs-v03-sync-to-code-expanded-version-record-CORRECTED.md",
+    "scripts/validate_phase_record.py",
+    "scripts/install-builder-team-qc.ps1"
+  ],
+  "current_patched_everythingcodex_files": [
+    "plugin/docs/multi-agent-modes.md",
+    "plugin/docs/phase-loop.md",
+    "plugin/docs/qc-record-schema.md",
+    "plugin/docs/orchestration-notes.md",
+    "plugin/docs/CHANGELOG.md",
+    "plugin/docs/docs-v03-sync-to-code-expanded-version-record-CORRECTED.md",
+    "plugin/scripts/validate_phase_record.py",
+    "plugin/scripts/install-builder-team-qc.ps1",
+    "site/index.html"
+  ],
+  "git_baseline_everythingcodex_files": [
+    "plugin/docs/multi-agent-modes.md",
+    "plugin/docs/phase-loop.md",
+    "plugin/docs/qc-record-schema.md",
+    "plugin/docs/orchestration-notes.md",
+    "plugin/docs/CHANGELOG.md",
+    "plugin/scripts/validate_phase_record.py",
+    "plugin/scripts/install-builder-team-qc.ps1",
+    "site/index.html"
+  ],
+  "git_baseline_unavailable": [
+    "plugin/docs/docs-v03-sync-to-code-expanded-version-record-CORRECTED.md"
+  ],
+  "public_payload_policy": {
+    "local_file_copies_published": false,
+    "reason": "Full local recovery folders were omitted from the public package to avoid publishing local paths, private audit provenance, and duplicated working-tree content.",
+    "recovery_source": "Use the repository commit history and the files listed in this manifest."
+  },
+  "notes": [
+    "The source builder-team-qc folder was a local working folder, so no source HEAD baseline is published.",
+    "Git baselines come from the everythingcodex mirror HEAD before the working-tree patch.",
+    "The corrected version-record file was new/untracked in the mirror baseline, so a git baseline may be unavailable for that file."
+  ]
+}

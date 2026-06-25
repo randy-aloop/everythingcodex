@@ -1,5 +1,7 @@
 {
   "schema_version": "1.0",
+  "default_max_revise_attempts": 3,
+  "release_gate_default": "auto",
   "quick_test_commands": [],
   "docker_smoke_commands": [],
   "release_phase_patterns": [
@@ -20,5 +22,22 @@
       "127.0.0.1",
       "localhost"
     ]
-  }
+  },
+  "required_test_policy": {
+    "minimum_required_passes": 1,
+    "skipped_required_tests_block": true
+  },
+  "enforcement": {
+    "enforce_role_verdicts": true,
+    "enforce_issue_register": true,
+    "require_passing_test": true,
+    "auto_release_detect": true,
+    "require_ponytail_diff_binding": true
+  },
+  "ponytail_modes_allowed": [
+    "task-scoped",
+    "project-agents",
+    "contained-workspace",
+    "unavailable-fallback"
+  ]
 }

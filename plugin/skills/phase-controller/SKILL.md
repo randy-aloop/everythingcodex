@@ -14,17 +14,20 @@ Use this order:
 1. Read the project build plan and identify the current phase.
 2. Run `scripts/init_qc.py` if `.qc/` does not exist.
 3. Run `scripts/start_phase.py --phase-id <id> --title <title>`.
-4. Apply `builder-agent` to create the candidate phase change.
-5. Apply Ponytail discipline and record minimal-code evidence with `record_ponytail_check.py`.
-6. If Ponytail is not `pass`, choose `revise` or `block` before running deeper evidence checks.
-7. Apply `test-agent`, then reviewer, compliance, integration, and release when relevant.
-8. Record deviations and test results as they happen.
-9. Run `validate_phase_record.py --phase-id <id> --scan-safety` while the phase is in progress.
-10. Before any completion claim, run `validate_phase_record.py --phase-id <id> --scan-safety --strict-gate`.
-11. Add `--release-phase` when runtime, Docker, API, deploy, dependency, sidecar, production-debug, rollback, or release behavior is in scope.
-12. Decide the phase gate: `pass`, `revise`, `block`, or `accepted_with_risk`.
-13. Update `.qc/phase-board.json` with the final gate transition.
-14. Do not start the next phase unless the current gate allows it.
+4. Run `scripts/audit_builder_scope.py --phase-id <id> --snapshot` before builder edits.
+5. Apply `builder-agent` to create the candidate phase change.
+6. Run `scripts/audit_builder_scope.py --phase-id <id> --audit --allow <path-or-glob>` after builder edits.
+7. Persist `changed-files.json` and `implementation-diff.patch`, then apply Ponytail discipline and record minimal-code evidence with `record_ponytail_check.py` for the current attempt.
+8. If Ponytail or builder scope is not `pass`, choose `revise` or `block` before running deeper evidence checks.
+9. Apply `test-agent`, then reviewer, compliance, integration, and release when relevant.
+10. Record deviations and test results as they happen.
+11. Run `validate_phase_record.py --phase-id <id> --scan-safety --require-builder-scope` while the phase is in progress.
+12. Before any completion claim, run `validate_phase_record.py --phase-id <id> --scan-safety --strict-gate --require-builder-scope`.
+13. Add `--release-phase` when runtime, Docker, API, deploy, dependency, sidecar, production-debug, rollback, or release behavior is in scope; otherwise let validator auto-detect release patterns from `.qc/qc-config.json`.
+14. Decide the phase gate: `pass`, `revise`, `block`, or `accepted_with_risk`.
+15. For `accepted_with_risk`, first call `scripts/record_decision.py` and capture the `decision_id`.
+16. Call `scripts/record_gate_decision.py --phase-id <id> --gate <gate>` to update `.qc/phase-board.json`, append `.qc/gate-events.jsonl`, and write `gate-summary.md`.
+17. Do not start the next phase unless the current gate allows it; `scripts/start_phase.py` refuses a new phase while the board is non-terminal unless `--force` is explicitly used.
 
 ## Local-Only Policy
 
@@ -64,7 +67,8 @@ Pass only when:
 - required deliverables are complete
 - required role verdicts are `pass`
 - at least one required non-skipped test is recorded as `pass`
-- Ponytail minimal-code verdict is `pass`
+- Ponytail minimal-code verdict is `pass` and is bound to the latest changed-files/diff evidence for the current attempt
+- builder scope audit is present and `pass`
 - seam audit is complete
 - no blocker deviation remains
 - no safety scan blocker remains
@@ -73,4 +77,4 @@ Pass only when:
 
 If evidence is missing, choose `block` or `revise`, not `pass`.
 
-Treat `Verdict: revise`, `Verdict: block`, all-skipped required tests, and missing release evidence as blockers. `accepted_with_risk` requires an explicit human decision in `.qc/decision-log.jsonl`; the controller must not self-approve it.
+Treat `Verdict: revise`, `Verdict: block`, all-skipped required tests, stale Ponytail diff evidence, open blocker issues, and missing release evidence as blockers. `accepted_with_risk` requires an explicit human decision in `.qc/decision-log.jsonl`; the controller must not self-approve it.

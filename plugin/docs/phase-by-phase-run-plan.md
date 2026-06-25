@@ -1,10 +1,12 @@
 # Builder Team QC Phase-by-Phase Run Plan
 
-Version: V02
-Updated: 2026-06-23
-Supersedes: V01
+Version: V05
+Updated: 2026-06-24
+Supersedes: V04
 
 This is the latest detailed operating plan for running Builder Team QC phase by phase.
+
+Document V05 describes the current Runtime V01 control model unless a later runtime version is explicitly named.
 
 Builder Team QC has two layers:
 
@@ -18,8 +20,10 @@ The product phase changes every time. The QC loop stays the same.
 ```text
 user goal
   -> phase-controller
-    -> open one phase
-    -> pre-build plan check
+    -> choose one phase
+    -> pre-build plan check, no durable writes yet
+    -> initialize .qc
+    -> open one phase and persist pre-build findings
     -> builder-agent creates candidate work
     -> changed-files/diff evidence is persisted
     -> ponytail-adapter checks minimal-code discipline
@@ -30,6 +34,54 @@ user goal
 ```
 
 V01 is local-only. It does not launch remote agents, expose an API server, call A2A, call remote MCP, require API keys, or use public tunnels. Codex remains the visible controller.
+
+## V04 Field Lesson - Phase 6 Safety Scan Classification
+
+During the `phase-002` run, Phase 6 initially blocked on safety scan findings that were policy documentation, reference URLs, and scanner self-definitions rather than active risky behavior.
+
+Observed Phase 6 blocker:
+
+```text
+warning: pending verdict remains in phase-record.md
+error: safety scan found 12 banned markers
+failed
+```
+
+Root cause:
+
+- The scanner treated every banned-pattern match as a blocker.
+- It could not distinguish policy-deny text such as "No remote A2A agents" from executable remote-agent setup.
+- It could not distinguish GitHub attribution/reference URLs from runtime endpoints.
+- It self-detected `BANNED_PATTERNS` definitions in `scripts/builder_team_qc_lib.py`.
+
+V04 solution:
+
+- Keep banned patterns.
+- Classify every safety finding with `severity` and `reason`.
+- Use `blocker` only for active secrets, active credentials, active remote execution/configuration, unsafe executor setup, or remote Docker configuration.
+- Use `warning` for risky terms in review-worthy docs/config context that do not look active.
+- Use `info` for scanner self-definitions, policy-deny documentation, and safe attribution/reference links.
+- Phase 6 and Phase 7 fail only when safety findings include `severity=blocker`.
+
+Required scanner output shape:
+
+```json
+{
+  "severity": "info",
+  "kind": "remote_url",
+  "file": "docs/orchestration-notes.md",
+  "line": 12,
+  "reason": "reference URL in documentation",
+  "text": "..."
+}
+```
+
+Controller rule:
+
+- If Phase 6 blocks on safety findings, inspect `.qc/safety-scan-findings.json`.
+- If findings are false positives caused by scanner context blindness, stop and report the proposed classifier change before editing scanner behavior.
+- After an approved safety-policy change, rerun the full proof set, not only the affected proof.
+- Record the blocker, fix rationale, affected build area, consequence, and final-result impact in `phase-record.md`, `.qc/issue-register.jsonl`, `gate-summary.md`, and the phase-by-phase build log.
 
 ## Phase 0 - Intake And Phase Selection
 
@@ -46,6 +98,7 @@ Inputs:
 - required tests
 - protected zones
 - known blockers
+- open/applicable lessons from `.qc/lessons-learned.jsonl`, when the file already exists
 
 Controller actions:
 
@@ -53,10 +106,13 @@ Controller actions:
 2. Identify the current phase only.
 3. Decide whether `release_required=true`.
 4. Set `max_revise_attempts=3` unless the user explicitly sets a lower cap.
-5. Run the pre-build plan check.
-6. Record assumptions in the phase record or deviation log.
+5. Read open/applicable lessons if `.qc/lessons-learned.jsonl` already exists.
+6. Run the pre-build plan check in memory.
+7. Hold assumptions, lesson inputs, and blockers as provisional findings until Phase 1 and Phase 2 create durable records.
 
 Do not start implementation if the phase cannot be named.
+
+Phase 0 does not write to `.qc/issue-register.jsonl`, `.qc/deviation-log.jsonl`, or `phase-record.md`, because those durable records may not exist yet. If Phase 0 finds a blocker, stop before implementation. After Phase 1 initializes `.qc/` and Phase 2 creates the phase run, persist the provisional findings to `phase-record.md`, `.qc/issue-register.jsonl`, and `.qc/deviation-log.jsonl` as applicable.
 
 Pre-build plan check:
 
@@ -69,7 +125,7 @@ Pre-build plan check:
 | Protected zones are identified | Stop for approval before writes. |
 | Existing failures are noted | Baseline failures must not be hidden as new proof. |
 
-Record the pre-build plan check in `phase-record.md`. If the check finds a blocker, open an issue in `.qc/issue-register.jsonl` and do not continue to builder work.
+Hold the pre-build plan check result as provisional evidence. Persist it in `phase-record.md` during Phase 2. If the check finds a blocker, open the issue in `.qc/issue-register.jsonl` after `.qc/` exists, then do not continue to builder work.
 
 Example phase identity:
 
@@ -91,14 +147,14 @@ Command:
 python scripts\init_qc.py --root <target-project>
 ```
 
-Expected state:
+Target layout after `init_qc.py` plus manual controller records:
 
 ```text
 .qc/
   phase-board.json
   qc-config.json
   issue-register.jsonl
-  lessons-learned.jsonl
+  lessons-learned.jsonl (manual until helper support exists)
   deviation-log.jsonl
   decision-log.jsonl
   ponytail-events.jsonl
@@ -127,26 +183,28 @@ python scripts\start_phase.py `
   --build-plan "<plan path or phase summary>"
 ```
 
-Expected state:
+Target phase-run layout after `start_phase.py` plus manual controller records:
 
 ```text
 .qc/phase-runs/<phase-id>/
   phase-record.md
   builder-notes.md
-  changed-files.json
-  implementation-diff.patch
+  changed-files.json (manual until helper support exists)
+  implementation-diff.patch (manual until helper support exists)
   reviewer-report.md
   test-report.md
   compliance-report.md
   seam-audit.md
   release-gate.md
-  gate-summary.md
+  gate-summary.md (manual until helper support exists)
   evidence/
 ```
 
 Confirmed current helper gap: `start_phase.py` creates the phase markdown files and `evidence/`, but it does not yet create `changed-files.json`, `implementation-diff.patch`, or `gate-summary.md`. The controller must create those manually until helper support exists.
 
 Manual phase-board contract until helper support exists:
+
+`release_not_applicable_rationale` is always present. When `release_required=false`, it must contain the release not-applicable rationale. When `release_required=true`, set it to an empty string and put release evidence in `release-gate.md`.
 
 ```json
 {
@@ -157,7 +215,7 @@ Manual phase-board contract until helper support exists:
   "latest_gate_decision": "pending",
   "latest_gate_at": "",
   "release_required": false,
-  "release_not_applicable_rationale": "<required when release_required=false>",
+  "release_not_applicable_rationale": "<rationale when release_required=false; empty string when true>",
   "revise_attempts": 0,
   "max_revise_attempts": 3,
   "required_evidence": [
@@ -166,10 +224,13 @@ Manual phase-board contract until helper support exists:
     "changed-files.json",
     "implementation-diff.patch",
     "ponytail-events.jsonl",
+    "test-report.md",
     "test-results/<phase-id>.jsonl",
     "reviewer-report.md",
     "compliance-report.md",
-    "seam-audit.md"
+    "seam-audit.md",
+    "release-gate.md",
+    "gate-summary.md"
   ],
   "blocking_issues": [],
   "accepted_risk_decision_id": "",
@@ -180,6 +241,7 @@ Manual phase-board contract until helper support exists:
 Gate rule:
 
 - No role work starts until the phase run exists.
+- Persist Phase 0 provisional findings to `phase-record.md`, `.qc/issue-register.jsonl`, and `.qc/deviation-log.jsonl` before builder work starts.
 - If the phase board cannot represent the current phase, stop and report `block`.
 
 ## Phase 3 - Builder Role
@@ -296,13 +358,13 @@ python scripts\record_test_result.py `
   --notes "Syntax check passed"
 ```
 
-Current helper gap:
+Confirmed current helper behavior:
 
-- Confirmed current `record_test_result.py` supports `--name`, `--command`, `--status`, `--exit-code`, `--output-file`, and `--notes`.
-- It does not yet support `--required` or `--attempt`.
-- Until that support exists, the controller must write required status and attempt number in `test-report.md`.
+- `record_test_result.py` supports `--name`, `--command`, `--status`, `--attempt`, `--required`, `--exit-code`, `--output-file`, and `--notes`.
+- It writes `attempt` and `required` into `.qc/test-results/<phase-id>.jsonl`.
+- When `.qc/phase-runs/<phase-id>/test-report.md` exists, it also appends the recorded JSON there.
 
-Target command contract after helper hardening:
+Current command contract:
 
 ```powershell
 python scripts\record_test_result.py `
@@ -333,10 +395,16 @@ Role output:
 .qc/phase-runs/<phase-id>/reviewer-report.md
 ```
 
-Required verdict:
+Required verdict when `release_required=true`:
 
 ```text
 Verdict: pass
+```
+
+Allowed verdict when `release_required=false`:
+
+```text
+Verdict: not_applicable
 ```
 
 Gate rule:
@@ -427,6 +495,7 @@ Gate rule:
 - `Verdict: not_applicable` is allowed only when `release_required=false`.
 - If runtime impact is uncertain, default to `release_required=true` until the controller records why release evidence is not applicable.
 - When `release_required=false`, `release-gate.md` must include `Release Required: false`, `Not Applicable Rationale`, `Checked By`, and `Checked At`, and the same rationale must be copied to `phase-board.json`.
+- When `release_required=true`, `release_not_applicable_rationale` in `phase-board.json` must be an empty string and `release-gate.md` must use `Verdict: pass`.
 
 ## Phase 6 - In-Progress Validation
 
@@ -443,12 +512,17 @@ python scripts\validate_phase_record.py `
 
 Expected behavior:
 
-- warnings are allowed while role reports are still pending
+- warning-only pending role reports are allowed while `--strict-gate` is absent
 - errors should stop the phase and be fixed or recorded as blockers
+- safety scan findings must include `severity` and `reason`
+- non-blocking safety findings produce warnings, not errors
 
 Gate rule:
 
 - Do not claim completion from in-progress validation.
+- With the current validator, non-strict validation returns exit `0` when only warnings are present.
+- With the current validator, non-strict validation returns exit `1` when actual errors are present, such as missing required files, missing Ponytail event, failed tests, unaccepted blocker deviations, release-phase errors, or safety scan blocker findings.
+- Safety scan findings with `severity=warning` or `severity=info` do not block by themselves, but they must be written to `.qc/safety-scan-findings.json` for review.
 
 ## Phase 7 - Strict Gate Validation
 
@@ -479,6 +553,8 @@ Strict gate blocks when:
 
 - required files are missing
 - required role verdicts are missing, duplicated, unknown, `pending`, `revise`, or `block`
+- `release-gate.md` uses `Verdict: not_applicable` while `release_required=true`
+- `release-gate.md` uses `Verdict: not_applicable` while `release_required=false` but lacks the required rationale block
 - latest Ponytail verdict is not `pass`
 - no test result exists
 - all required tests are skipped
@@ -486,12 +562,14 @@ Strict gate blocks when:
 - a blocker issue remains open in `.qc/issue-register.jsonl`
 - unaccepted blocker deviation exists
 - accepted-risk claim lacks matching decision-log entry
-- safety scan finds banned markers
+- safety scan finds one or more `severity=blocker` findings
 - release phase lacks completed release evidence
 
 Exit-code handling:
 
 - Confirmed current `validate_phase_record.py` returns `0` when no errors are present and `1` for any validation error.
+- Confirmed current non-strict behavior: pending role reports are warnings, not errors, when `--strict-gate` is absent.
+- Confirmed V04 safety scan behavior: non-blocking safety findings are warnings; blocker safety findings are errors.
 - Target contract is `0` pass, `10` strict-gate failure, `20` schema/config/invocation error, and `30` safety blocker.
 - Until target exit codes are implemented, the controller must read the validator output and record the observed exit code plus the interpreted failure class in `gate-summary.md`.
 
@@ -539,6 +617,7 @@ Required decision-log fields:
 
 ```json
 {
+  "timestamp": "<UTC timestamp>",
   "decision_id": "decision-001",
   "phase_id": "<phase-id>",
   "decision_type": "accepted_with_risk",
@@ -559,7 +638,7 @@ Gate rule:
 - A boolean in `deviation-log.jsonl` is not enough without a matching decision-log record.
 - `accepted_with_risk` must reference a human decision id in both the deviation or issue record and `phase-board.json`.
 
-Target helper contract:
+Current helper contract:
 
 ```powershell
 python scripts\record_decision.py `
@@ -576,13 +655,18 @@ python scripts\record_decision.py `
   --follow-up "<next required check>"
 ```
 
-Current helper gap:
+Confirmed current helper behavior:
 
-- `record_decision.py` does not exist yet. Until it exists, append the JSONL record manually and disclose that manual action in the user-facing report.
+- `record_decision.py` should be used for accepted-risk and approval records. Manual JSONL edits are fallback-only and must be disclosed.
+- `--decision-id` is optional; when omitted, the helper generates the next stable decision id for the phase.
+- The helper writes the current UTC timestamp into the JSONL record.
+- Add `--json` when the controller needs machine-readable output for a phase report.
 
 ## Phase 10 - Final Gate State Update
 
 Goal: make durable state match the gate outcome.
+
+In all final phase-board examples, `release_not_applicable_rationale` means: rationale text when `release_required=false`; empty string when `release_required=true`.
 
 For `pass`:
 
@@ -595,7 +679,7 @@ For `pass`:
   "latest_gate_decision": "pass",
   "latest_gate_at": "<UTC timestamp>",
   "release_required": false,
-  "release_not_applicable_rationale": "<required when release_required=false>",
+  "release_not_applicable_rationale": "<rationale when release_required=false; empty string when true>",
   "revise_attempts": 0,
   "max_revise_attempts": 3,
   "required_evidence": ["<evidence paths>"],
@@ -616,7 +700,7 @@ For `block`:
   "latest_gate_decision": "block",
   "latest_gate_at": "<UTC timestamp>",
   "release_required": false,
-  "release_not_applicable_rationale": "<required when release_required=false>",
+  "release_not_applicable_rationale": "<rationale when release_required=false; empty string when true>",
   "revise_attempts": 3,
   "max_revise_attempts": 3,
   "required_evidence": ["<evidence paths>"],
@@ -637,7 +721,7 @@ For `accepted_with_risk`:
   "latest_gate_decision": "accepted_with_risk",
   "latest_gate_at": "<UTC timestamp>",
   "release_required": false,
-  "release_not_applicable_rationale": "<required when release_required=false>",
+  "release_not_applicable_rationale": "<rationale when release_required=false; empty string when true>",
   "revise_attempts": 0,
   "max_revise_attempts": 3,
   "required_evidence": ["<evidence paths>"],
@@ -651,20 +735,22 @@ Gate rule:
 
 - No next phase starts while `phase-board.json` still says `open` and `latest_gate_decision=pending`.
 
-Target helper contract:
+Current helper contract:
 
 ```powershell
 python scripts\record_gate_decision.py `
   --root <target-project> `
   --phase-id <phase-id> `
-  --decision pass `
-  --validator-exit-code 0 `
-  --summary "<short gate summary>"
+  --gate pass `
+  --next-phase-id <next-phase-id> `
+  --note "<short gate summary>"
 ```
 
-Current helper gap:
+Confirmed current helper behavior:
 
-- `record_gate_decision.py` does not exist yet. Until it exists, update `phase-board.json` and write `gate-summary.md` manually.
+- `record_gate_decision.py` exists and should be used to update `phase-board.json`, append `gate-events.jsonl`, and write `gate-summary.md`. Manual edits are fallback-only and must be disclosed.
+- For `accepted_with_risk`, pass `--decision-id <decision-id>` so the helper can verify a matching decision-log entry.
+- Add `--json` when the controller needs machine-readable output for a phase report.
 
 ## Phase 11 - User-Facing Report
 
@@ -695,7 +781,7 @@ python scripts\summarize_phase.py `
 
 Confirmed current behavior: `summarize_phase.py` prints JSON to stdout and does not write a file. Capture or paste the summary into `gate-summary.md`.
 
-If the phase reveals a reusable process lesson, append it to `.qc/lessons-learned.jsonl`. Lessons do not satisfy or bypass current blockers.
+If the phase reveals a reusable process lesson, append it to `.qc/lessons-learned.jsonl`. Lessons do not satisfy or bypass current blockers. Phase 0 of the next run must read open/applicable lessons and either apply them to the new phase plan or record why they do not apply.
 
 ## Phase 12 - Next Phase Handoff
 
@@ -720,25 +806,26 @@ Gate rule:
 
 ```text
 0. Intake and choose one phase
-0A. Run pre-build plan check and open blocker issues if needed
+0A. Run pre-build plan check in memory, no durable writes yet
 1. init_qc.py
 2. start_phase.py
+2A. Persist Phase 0 findings to phase-record, issue register, or deviation log
 3. builder-agent creates candidate
-4. persist changed-files/diff evidence
-5. ponytail-adapter gates scope/minimal-code
-6. evidence fan-out, sequential in V01
-   6A. test-agent
-   6B. reviewer-agent
-   6C. compliance-agent
-   6D. integration-agent
-   6E. release-agent when release_required=true
-7. validate in progress
-8. validate strict gate
-9. revise loop, max 3 failed attempts
-10. accepted-risk path only with human decision-log proof
-11. update phase-board final state
-12. summarize and report gate result
-13. hand off next phase
+3A. persist changed-files/diff evidence
+4. ponytail-adapter gates scope/minimal-code
+5. evidence fan-out, sequential in V01
+   5A. test-agent
+   5B. reviewer-agent
+   5C. compliance-agent
+   5D. integration-agent
+   5E. release-agent when release_required=true
+6. validate in progress
+7. validate strict gate
+8. revise loop, max 3 failed attempts
+9. accepted-risk path only with human decision-log proof
+10. update phase-board final state
+11. summarize and report gate result
+12. hand off next phase
 ```
 
 ## Recommended Prompt
@@ -750,9 +837,10 @@ Build plan: <plan path or phase summary>
 Current phase: <phase id and title>
 Next phase: <next phase id or unknown>
 Run the latest phase-by-phase controller plan:
+- run the pre-build plan check in memory
 - initialize or verify .qc
-- run the pre-build plan check
 - start/resume the phase
+- persist pre-build findings after records exist
 - run builder-agent
 - persist changed-files/diff evidence
 - run Ponytail before test/review fan-out
@@ -765,7 +853,7 @@ Run the latest phase-by-phase controller plan:
 
 ## Current Implementation Note
 
-The latest documentation defines the desired deterministic contract. Two helper scripts are still planned for a stronger implementation:
+The latest documentation defines the deterministic contract. Two helper scripts now implement the strongest current state path:
 
 - `record_decision.py` for decision-log and accepted-risk records
 - `record_gate_decision.py` for final phase-board transitions

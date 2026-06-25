@@ -1,8 +1,8 @@
 # QC Record Schema
 
-Version: V02
-Updated: 2026-06-23
-Supersedes: V01
+Version: V03.1
+Updated: 2026-06-25
+Supersedes: V03
 
 Builder Team QC stores local, inspectable records under `.qc/`. Records are local files. Do not store secrets, tokens, API keys, OAuth files, passwords, service account keys, or credentials.
 
@@ -20,17 +20,17 @@ Verdict: <value>
 
 Allowed role verdict values are `pending`, `pass`, `revise`, `block`, and `not_applicable`. Parsing is case-insensitive for the label and value, but writers should use lowercase values. Missing verdicts, multiple conflicting verdicts, or unknown verdicts fail strict gate. For required reports, only `pass` can satisfy the gate. `not_applicable` is valid only for `release-gate.md` when `release_required=false` and a rationale is recorded.
 
-Target validator exit-code contract:
+Validator exit-code contract:
 
 | Exit code | Meaning |
 | --- | --- |
 | `0` | Validation passed. |
-| `1` | Current implementation fallback: validation failed or validator reported errors. |
-| `10` | Target contract: strict gate failed because evidence or role verdicts do not pass. |
-| `20` | Target contract: schema, config, JSON, path, or invocation error. |
-| `30` | Target contract: safety scan blocker. |
+| `1` | Non-strict/general validation failure. |
+| `10` | Strict gate failed because evidence or role verdicts do not pass. |
+| `20` | Schema, config, JSON, path, or invocation error. |
+| `30` | Safety scan blocker. |
 
-Confirmed current behavior: `validate_phase_record.py` currently returns `0` on success and `1` for any error. Until richer exit codes are implemented, the controller must read the printed JSON/text result and classify the failure in the phase report.
+Confirmed current behavior: `validate_phase_record.py` returns classified exit codes and can emit machine-readable JSON with `schema_errors`, `gate_errors`, `safety_errors`, and `release_required`.
 
 ## QC Config
 
@@ -97,6 +97,7 @@ Required fields:
 | `next_phase_id` | string | Planned next phase id, empty if unknown. |
 | `latest_gate_decision` | string | `pending`, `pass`, `revise`, `block`, or `accepted_with_risk`. |
 | `latest_gate_at` | string | UTC timestamp for the latest final gate decision; empty while pending. |
+| `last_gate_at` | string | Compatibility alias for `latest_gate_at` during `0.2.0-trial`. |
 | `release_required` | boolean | True when runtime, Docker, API, deploy, sidecar, dependency, or production-debug evidence is required. |
 | `release_not_applicable_rationale` | string | Required when `release_required=false` and release evidence is marked `not_applicable`. |
 | `revise_attempts` | integer | Failed revise attempts in the current loop. |
@@ -202,16 +203,28 @@ Required fields:
 | `attempt` | integer | Builder/revise attempt this check applies to. |
 | `mode` | string | `task-scoped`, `project-agents`, `contained-workspace`, or `unavailable-fallback`. |
 | `mode_source` | string | `controller`, `project-instructions`, `contained-workspace`, or `manual-fallback`. |
+| `checklist_version` | string | Local checklist/version used for the judgment. |
 | `upstream_hook_enabled` | boolean | True only when upstream Ponytail code or hooks were explicitly reviewed and enabled. |
 | `upstream_hook_review_id` | string | Required when `upstream_hook_enabled=true`; otherwise empty. |
+| `upstream_ponytail_version` | string | Upstream version when hooks are enabled; otherwise empty. |
 | `yagni_check` | string | Non-empty rationale. |
+| `yagni_status` | string | `pass`, `revise`, or `block`. |
 | `stdlib_check` | string | Non-empty rationale. |
+| `stdlib_status` | string | `pass`, `revise`, or `block`. |
 | `dependency_check` | string | Non-empty rationale. |
+| `dependency_status` | string | `pass`, `revise`, or `block`. |
 | `abstraction_check` | string | Non-empty rationale. |
+| `abstraction_status` | string | `pass`, `revise`, or `block`. |
 | `minimum_code_verdict` | string | `pass`, `revise`, or `block`. |
+| `changed_files_path` | string | Project-relative path to changed-file evidence. |
+| `changed_files_hash` | string | SHA-256 of the changed-file evidence at check time. |
+| `implementation_diff_path` | string | Project-relative path to implementation diff evidence. |
+| `implementation_diff_hash` | string | SHA-256 of the diff evidence at check time. |
+| `builder_scope_audit_id` | string | Builder-scope audit timestamp/id this check consumed. |
+| `builder_scope_audit_hash` | string | SHA-256 of the builder-scope audit evidence at check time. |
 | `notes` | string | Optional notes. |
 
-Gate pass requires the latest event for the phase and attempt to have `minimum_code_verdict=pass`.
+Gate pass requires the latest event for the phase and attempt to have `minimum_code_verdict=pass`, every subcheck status as `pass`, and hashes matching the latest changed-files, implementation-diff, and builder-scope audit artifacts.
 
 ## Test Results
 
@@ -232,9 +245,9 @@ Required fields:
 | `notes` | string | Notes or skip reason. |
 | `required` | boolean | True when this check is required for the phase. |
 
-Strict gate requires at least one required non-skipped passing check. A skipped required check blocks unless a matching accepted-risk decision exists.
+Strict gate requires at least one required test with status `pass`. A skipped required check blocks strict validation. `accepted_with_risk` is a separate gate decision recorded after validation evidence is reviewed, not a validator-level exemption for skipped required tests.
 
-Confirmed current helper gap: `record_test_result.py` does not yet accept `--required` or `--attempt`. Until it does, the controller must record required status and attempt number in `test-report.md` and treat missing machine-readable fields as a strict-gate limitation.
+Confirmed current behavior: `record_test_result.py` accepts `--required` and `--attempt`, writes those fields to `.qc/test-results/<phase-id>.jsonl`, and updates `test-report.md`.
 
 Target command contract:
 
@@ -272,7 +285,7 @@ Required fields:
 
 Unaccepted blocker deviations fail strict gate.
 
-Confirmed current helper gap: `record_deviation.py` does not yet accept `--attempt`, `--issue-id`, or `--decision-id`. Until it does, the controller must add those fields manually when the deviation is gate-relevant.
+Confirmed current behavior: `record_deviation.py` accepts `--attempt`, `--issue-id`, and `--decision-id`, writes those fields to `.qc/deviation-log.jsonl`, and links gate-relevant deviations to issue and decision evidence.
 
 Example:
 
@@ -283,6 +296,9 @@ python scripts\record_deviation.py `
   --expected "Required Docker smoke check passes" `
   --actual "Docker is unavailable on this machine" `
   --severity blocker `
+  --attempt 1 `
+  --issue-id "<issue id when applicable>" `
+  --decision-id "<decision id when accepted_with_risk>" `
   --resolution "Block phase or record accepted-risk human decision"
 ```
 
@@ -328,6 +344,8 @@ Accepted-risk records must include:
 | `reason` | string | Why the risk is accepted. |
 | `owner` | string | Person responsible for follow-up. |
 | `deadline` | string | Follow-up due date or phase. |
+| `rollback` | string | How to unwind the accepted risk if it becomes unsafe. |
+| `follow_up` | string | Required follow-up action. |
 | `rollback` | string | How to undo or contain the risk. |
 | `follow_up` | string | Next required check or fix. |
 
@@ -350,7 +368,7 @@ python scripts\record_decision.py `
   --follow-up "<next required check>"
 ```
 
-Confirmed current helper gap: `record_decision.py` does not exist yet. Until it exists, the controller must append the JSONL record manually and cite the decision id in the phase report.
+Confirmed current behavior: `record_decision.py` appends the JSONL record and prints or emits the decision id for the phase report.
 
 ## Release Not-Applicable Rationale
 
@@ -413,7 +431,7 @@ python scripts\record_gate_decision.py `
   --summary "<short gate summary>"
 ```
 
-Confirmed current helper gap: `record_gate_decision.py` does not exist yet. Until it exists, the controller must update `phase-board.json` and write `gate-summary.md` manually.
+Confirmed current behavior: `record_gate_decision.py` updates `phase-board.json`, appends `.qc/gate-events.jsonl`, updates the phase record gate/status fields, and writes `gate-summary.md`.
 
 ## Phase Summary
 
@@ -433,7 +451,7 @@ Gate pass requires:
 
 - all required role verdicts are `pass`
 - latest Ponytail verdict for the current attempt is `pass`
-- at least one required non-skipped test passed
+- at least one required test has status `pass`
 - no recorded test failed
 - no blocker issue remains open
 - no unaccepted blocker deviation exists

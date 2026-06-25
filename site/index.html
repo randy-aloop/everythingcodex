@@ -901,8 +901,9 @@
 
       <div class="meta" aria-label="Article metadata">
         <span><b>Prepared for:</b> Workhorse Codex projects</span>
-        <span><b>Updated:</b> June 24, 2026</span>
-        <span><b>Mode:</b> local-only V01 with V02 orchestration notes</span>
+        <span><b>Updated:</b> June 25, 2026</span>
+        <span><b>Version:</b> 0.2.1-trial</span>
+        <span><b>Mode:</b> local-only trial with strict phase gates</span>
       </div>
 
       <details class="mobile-toc">
@@ -921,26 +922,45 @@
       <section class="hero-visual" aria-label="Builder Team QC control-flow diagram">
         <h2 class="visually-hidden">Builder Team QC phase control flow</h2>
         <div class="flow-board">
-          <div class="flow-row" aria-label="Main phase sequence">
+          <div class="flow-row" aria-label="Pre-build readiness sequence">
             <div class="flow-card controller">
               <strong>1. phase-controller</strong>
-              <span>Reads the build plan, opens or resumes the phase record, and owns the final gate.</span>
+              <span>Reads the request, build plan, current phase, prior output, and next-phase expectations.</span>
             </div>
             <div class="flow-arrow" aria-hidden="true">-&gt;</div>
+            <div class="flow-card">
+              <strong>2. pre-build check</strong>
+              <span>Confirms the phase is ready before work starts and sets release-required state.</span>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">-&gt;</div>
+            <div class="flow-card gate">
+              <strong>3. phase ready?</strong>
+              <span>If no, open a blocker in <code>issue-register.jsonl</code> and stop. If yes, initialize <code>.qc</code>.</span>
+            </div>
+          </div>
+
+          <div class="join-strip">Ready path: initialize <code>.qc</code>, start the phase record, set <code>release_required</code>, and cap revise attempts at three.</div>
+
+          <div class="flow-row" aria-label="Build and Ponytail sequence">
             <div class="flow-card builder">
-              <strong>2. builder-agent</strong>
+              <strong>4. builder-agent</strong>
               <span>Implements the smallest correct change for the current phase only.</span>
             </div>
             <div class="flow-arrow" aria-hidden="true">-&gt;</div>
+            <div class="flow-card">
+              <strong>5. diff evidence</strong>
+              <span>Persist <code>changed-files.json</code> and <code>implementation-diff.patch</code> for downstream roles.</span>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">-&gt;</div>
             <div class="flow-card ponytail">
-              <strong>3. ponytail-adapter</strong>
-              <span>Runs the minimal-code discipline gate before deeper evidence checks.</span>
+              <strong>6. ponytail-adapter</strong>
+              <span>Checks scope and minimal-code discipline before deeper evidence checks.</span>
             </div>
           </div>
 
           <div class="qc-bus">
             <strong>.qc shared state</strong>
-            <span>Every role reads and writes durable evidence: phase record, changed files, test events, Ponytail verdicts, deviations, decisions, seam audits, and gate summary.</span>
+            <span>Every role reads and writes durable evidence: phase records, changed files, test events, Ponytail verdicts, issue register, deviations, decisions, seam audits, lessons learned, and gate summary.</span>
           </div>
 
           <div class="evidence-grid" aria-label="Evidence fan-out checks">
@@ -948,29 +968,48 @@
             <div class="evidence-card"><strong>reviewer-agent</strong><span>Checks architecture fit, minimal code, and maintainability.</span></div>
             <div class="evidence-card"><strong>compliance-agent</strong><span>Verifies build-plan adherence, protected zones, and required records.</span></div>
             <div class="evidence-card"><strong>integration-agent</strong><span>Audits previous, current, and next phase seams.</span></div>
-            <div class="evidence-card"><strong>release-agent</strong><span>Checks runtime, Docker, debug, rollback, and no-secrets readiness when applicable.</span></div>
+            <div class="evidence-card"><strong>release conditional</strong><span>Run release-agent only when runtime, Docker, deploy, API, dependency, rollback, or debug behavior is touched.</span></div>
           </div>
 
-          <div class="join-strip">Join point: the controller reads every evidence branch before the strict gate can pass.</div>
+          <div class="join-strip">Join point: test, review, compliance, seam audit, issue-register state, and release evidence must be reviewed before the controller allows the gate to pass.</div>
 
-          <div class="flow-row" aria-label="Gate loop sequence">
+          <div class="flow-row" aria-label="Validation and gate sequence">
             <div class="flow-card gate">
-              <strong>4. strict gate</strong>
-              <span><code>validate_phase_record.py --strict-gate</code> checks durable evidence and safety conditions.</span>
+              <strong>7. validate in-progress</strong>
+              <span><code>validate_phase_record.py --scan-safety</code> finds missing records before completion.</span>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">-&gt;</div>
+            <div class="flow-card gate">
+              <strong>8. strict gate</strong>
+              <span>Run <code>--strict-gate</code>; release phases are detected from phase patterns and required evidence.</span>
             </div>
             <div class="flow-arrow" aria-hidden="true">-&gt;</div>
             <div class="flow-card">
-              <strong>5. gate decision</strong>
+              <strong>9. gate decision</strong>
               <span>Return <code>pass</code>, <code>revise</code>, <code>block</code>, or <code>accepted_with_risk</code>.</span>
             </div>
+          </div>
+
+          <div class="join-strip">Revise path loops back to builder while attempts are below three. Block stops. Accepted risk requires a human decision-log entry. Pass writes gate summary and final phase-board transition.</div>
+
+          <div class="flow-row" aria-label="Final state sequence">
+            <div class="flow-card">
+              <strong>10. gate-summary.md</strong>
+              <span>Record validator output, role verdicts, blockers, accepted risk, and final gate interpretation.</span>
+            </div>
             <div class="flow-arrow" aria-hidden="true">-&gt;</div>
             <div class="flow-card">
-              <strong>6. phase-board update</strong>
-              <span>Record final status, next phase, accepted risks, and summary for later audit.</span>
+              <strong>11. phase-board update</strong>
+              <span>Use <code>record_gate_decision.py</code> to record final status, next phase, accepted risks, summary, and gate events.</span>
+            </div>
+            <div class="flow-arrow" aria-hidden="true">-&gt;</div>
+            <div class="flow-card">
+              <strong>12. next phase allowed</strong>
+              <span>The next phase starts only after the current gate permits progress.</span>
             </div>
           </div>
         </div>
-        <p class="hero-note">In V01, Codex executes these role passes in one local conversation. The fan-out is ADK-style orchestration, not true concurrent runtime execution.</p>
+        <p class="hero-note">In 0.2.1-trial, Codex executes these role passes in one local conversation. The fan-out is ADK-style orchestration, not true concurrent runtime execution.</p>
       </section>
 
       <section id="what">
@@ -982,7 +1021,7 @@
           <div class="card">
             <div class="stripe"></div>
             <h3>Local control</h3>
-            <p>Codex stays in the loop. No hidden server, remote A2A surface, public tunnel, or automatic global install is required for V01.</p>
+            <p>Codex stays in the loop. No hidden server, remote A2A surface, public tunnel, or automatic global install is required for the local trial package.</p>
           </div>
           <div class="card">
             <div class="stripe green"></div>
@@ -1026,7 +1065,7 @@
               <tr>
                 <td>Custom logic</td>
                 <td>Local scripts under <code>scripts/</code></td>
-                <td>Create <code>.qc</code>, start phase records, record events, validate gates, and summarize phase state.</td>
+                <td>Create <code>.qc</code>, start phase records, record events, validate gates, and summarize phase state. Decision and final gate helpers are still planned.</td>
               </tr>
             </tbody>
           </table>
@@ -1038,7 +1077,7 @@
             <thead>
               <tr>
                 <th>ADK concept</th>
-                <th>Builder Team QC V01 equivalent</th>
+                <th>Builder Team QC 0.2.1-trial equivalent</th>
                 <th>Important difference</th>
               </tr>
             </thead>
@@ -1051,7 +1090,7 @@
               <tr>
                 <td><code>ParallelAgent</code></td>
                 <td>Logical evidence fan-out: test, review, compliance, integration, release.</td>
-                <td>Sequential in V01. The join rule is real; concurrency is not.</td>
+                <td>Logical fan-out is coordinated by Codex in one local run. The join rule is real; concurrency is not.</td>
               </tr>
               <tr>
                 <td><code>LoopAgent</code></td>
@@ -1101,7 +1140,7 @@
 
       <section id="orchestration">
         <h2>Orchestrating work with workflow patterns</h2>
-        <p>ADK uses Sequential, Parallel, and Loop agents. Builder Team QC uses the same orchestration ideas in a local file-backed way. In V01, fan-out is sequential role execution with a join point, not true concurrent runtime execution.</p>
+        <p>ADK uses Sequential, Parallel, and Loop agents. Builder Team QC uses the same orchestration ideas in a local file-backed way. In 0.2.1-trial, fan-out is coordinated role execution with a join point, not true concurrent runtime execution.</p>
 
         <div class="patterns">
           <div class="pattern">
@@ -1158,7 +1197,7 @@
           <li>Run <code>ponytail-adapter</code> as a phase-scope minimal-code gate.</li>
           <li>Run test, reviewer, compliance, integration, and release checks as required by the phase.</li>
           <li>Run <code>validate_phase_record.py --scan-safety</code> during the phase and <code>--strict-gate</code> before completion.</li>
-          <li>Decide <code>pass</code>, <code>revise</code>, <code>block</code>, or <code>accepted_with_risk</code>, then update the phase board and gate summary.</li>
+          <li>Decide <code>pass</code>, <code>revise</code>, <code>block</code>, or <code>accepted_with_risk</code>, then manually update the phase board and gate summary until the planned gate-decision helper exists.</li>
         </ol>
 
         <h3>What is enforced by code?</h3>
@@ -1178,9 +1217,14 @@
                 <td>Reviewer may assess whether the recorded rationale is credible.</td>
               </tr>
               <tr>
-                <td>Required test evidence exists and no recorded required test failed</td>
-                <td><code>validate_phase_record.py</code></td>
+                <td>At least one test result is recorded and no recorded test has status <code>fail</code></td>
+                <td><code>validate_phase_record.py --strict-gate</code></td>
                 <td>Test role decides whether the selected checks are meaningful.</td>
+              </tr>
+              <tr>
+                <td>At least one required non-skipped test passes; skipped required tests block unless accepted risk is recorded</td>
+                <td>Not yet deterministic in <code>validate_phase_record.py</code></td>
+                <td>Controller applies <code>qc-config.json</code> required-test policy and records accepted risk when needed.</td>
               </tr>
               <tr>
                 <td>Required role files are present and no verdict remains pending</td>
@@ -1189,7 +1233,7 @@
               </tr>
               <tr>
                 <td>Architecture fit, maintainability, and self-review quality</td>
-                <td>Not fully deterministic in V01</td>
+                <td>Judgment-backed, with deterministic evidence records</td>
                 <td>Reviewer and compliance reports; executable checks should be preferred when available.</td>
               </tr>
             </tbody>
@@ -1206,15 +1250,21 @@
           <div class="state"><strong><code>phase-runs/{phase-id}/</code></strong><span>Phase record and role reports for builder, reviewer, test, compliance, seam, and release.</span></div>
           <div class="state"><strong><code>test-results/{phase-id}.jsonl</code></strong><span>Machine-readable test evidence with command, status, exit code, and notes.</span></div>
           <div class="state"><strong><code>ponytail-events.jsonl</code></strong><span>Ponytail mode, checks, and minimal-code verdict.</span></div>
+          <div class="state"><strong><code>issue-register.jsonl</code></strong><span>Open, fixed, and blocker issue records used by compliance and phase-board blocking issues; open blockers are part of the target strict-gate contract.</span></div>
           <div class="state"><strong><code>deviation-log.jsonl</code></strong><span>Scope changes, blockers, unresolved risk, and accepted-risk metadata.</span></div>
           <div class="state"><strong><code>decision-log.jsonl</code></strong><span>Human decisions, approvals, accepted-risk bypasses, and follow-up commitments.</span></div>
+          <div class="state"><strong><code>lessons-learned.jsonl</code></strong><span>Documented future-process lessons recorded manually by the controller; current init helpers do not create this file, and lessons do not bypass blockers.</span></div>
         </div>
-        <p><code>accepted_with_risk</code> is a gate bypass, not a controller convenience. It should require an explicit human decision recorded in <code>decision-log.jsonl</code>; the controller must not self-approve incomplete evidence.</p>
+        <p><code>accepted_with_risk</code> is a final gate decision path, not a validator exemption for missing required evidence. It requires an explicit human decision recorded in <code>decision-log.jsonl</code>; the controller must not self-approve incomplete evidence.</p>
+
+        <h3>Implemented helper status</h3>
+        <p><code>record_decision.py</code> records accepted-risk and approval decisions, and <code>record_gate_decision.py</code> records the final phase-board transition and gate summary. The controller should use those helpers instead of hand-editing <code>.qc/decision-log.jsonl</code>, <code>.qc/phase-board.json</code>, or <code>.qc/phase-runs/{phase-id}/gate-summary.md</code>.</p>
+        <p>The trial helpers now support machine-readable test <code>required</code> and <code>attempt</code> fields, Ponytail <code>attempt</code> and <code>mode_source</code> fields, deviation <code>issue_id</code> and <code>decision_id</code> fields, issue-register validation, and classified validator exits. The remaining known automation gap is a dedicated generator for <code>changed-files.json</code> and <code>implementation-diff.patch</code>; those artifacts still need to be produced before strict gate validation.</p>
       </section>
 
       <section id="ponytail">
         <h2>Ponytail is a gate, not a test helper</h2>
-        <p>Ponytail is the project code name for the minimal-code discipline checklist used by Builder Team QC. In V01, it is an instruction/checklist adapter, not a trusted external runtime or autonomous hook system.</p>
+        <p>Ponytail is the project code name for the minimal-code discipline checklist used by Builder Team QC. In the local trial package, it is an instruction/checklist adapter, not a trusted external runtime or autonomous hook system.</p>
         <p>Credit: the Ponytail discipline in this project credits <a href="https://github.com/DietrichGebert/ponytail">DietrichGebert/ponytail</a>, the MIT-licensed Ponytail project by Dietrich Gebert. Builder Team QC does not vendor or run upstream Ponytail by default; it uses a local checklist unless upstream hooks are explicitly reviewed, enabled, and recorded.</p>
         <p>The Ponytail adapter checks whether the builder output obeys the minimal-code discipline: YAGNI, standard library first, existing project tools before new dependencies, and no unnecessary abstraction. If it passes, the evidence checks fan out. If it revises or blocks, the controller should stop or loop back before spending time on deeper validation.</p>
 
@@ -1278,43 +1328,50 @@ Run the phase controller with Ponytail minimal-code checks,
 tests, seam audit, compliance review, and strict gate validation.</code></pre>
 
         <h3>Script-level control path</h3>
-        <p>For command-level operation, the key scripts are <code>init_qc.py</code>, <code>start_phase.py</code>, <code>record_ponytail_check.py</code>, <code>record_test_result.py</code>, <code>record_deviation.py</code>, <code>validate_phase_record.py</code>, and <code>summarize_phase.py</code>. They are explicit tools, not autonomous agents.</p>
+        <p>For command-level operation, the key scripts are <code>init_qc.py</code>, <code>start_phase.py</code>, <code>record_ponytail_check.py</code>, <code>record_test_result.py</code>, <code>record_deviation.py</code>, <code>validate_phase_record.py</code>, and <code>summarize_phase.py</code>. They are explicit tools, not autonomous agents. The examples below use PowerShell line continuations.</p>
 
         <pre><code>cd plugin
 
 python scripts\init_qc.py --root &lt;target-project&gt;
 
-python scripts\start_phase.py ^
-  --root &lt;target-project&gt; ^
-  --phase-id phase-001 ^
-  --title "Phase title" ^
-  --next-phase-id phase-002 ^
+python scripts\start_phase.py `
+  --root &lt;target-project&gt; `
+  --phase-id phase-001 `
+  --title "Phase title" `
+  --next-phase-id phase-002 `
   --build-plan "path\to\build-plan.md"
 
-python scripts\record_ponytail_check.py ^
-  --root &lt;target-project&gt; ^
-  --phase-id phase-001 ^
-  --mode task-scoped ^
-  --yagni-check "No extra scope added" ^
-  --stdlib-check "Used existing tools where possible" ^
-  --dependency-check "No unnecessary dependency added" ^
-  --abstraction-check "No unnecessary abstraction added" ^
-  --minimum-code-verdict pass ^
+python scripts\record_ponytail_check.py `
+  --root &lt;target-project&gt; `
+  --phase-id phase-001 `
+  --mode task-scoped `
+  --yagni-check "No extra scope added" `
+  --stdlib-check "Used existing tools where possible" `
+  --dependency-check "No unnecessary dependency added" `
+  --abstraction-check "No unnecessary abstraction added" `
+  --minimum-code-verdict pass `
   --notes "Ponytail gate passed"
 
-python scripts\record_test_result.py ^
-  --root &lt;target-project&gt; ^
-  --phase-id phase-001 ^
-  --name smoke ^
-  --command "test command here" ^
-  --status pass ^
-  --exit-code 0 ^
+python scripts\record_test_result.py `
+  --root &lt;target-project&gt; `
+  --phase-id phase-001 `
+  --name smoke `
+  --command "test command here" `
+  --status pass `
+  --exit-code 0 `
   --notes "Smoke check passed"
 
-python scripts\validate_phase_record.py ^
-  --root &lt;target-project&gt; ^
-  --phase-id phase-001 ^
-  --scan-safety ^
+python scripts\validate_phase_record.py `
+  --root &lt;target-project&gt; `
+  --phase-id phase-001 `
+  --scan-safety `
+  --strict-gate
+
+# Release/runtime phases are detected from phase patterns and required evidence.
+python scripts\validate_phase_record.py `
+  --root &lt;target-project&gt; `
+  --phase-id phase-001 `
+  --scan-safety `
   --strict-gate</code></pre>
 
         <h3>What the final answer should report</h3>
@@ -1330,7 +1387,7 @@ python scripts\validate_phase_record.py ^
           <a class="resource" href="../plugin/docs/phase-by-phase-run-plan.md">Phase-by-phase run plan<span>Detailed latest runbook from intake through final phase-board handoff.</span></a>
           <a class="resource" href="../plugin/docs/orchestration-diagram.md">Orchestration diagram<span>System, state, and ADK-style pattern views.</span></a>
           <a class="resource" href="../plugin/docs/multi-agent-modes.md">Multi-agent modes<span>Hierarchy, shared state, delegation, and tool boundaries.</span></a>
-          <a class="resource" href="../plugin/docs/single-run-vs-parallel-runtime.md">Single run vs parallel runtime<span>Explains the V01 single-Codex loop and future true parallel runtime options.</span></a>
+          <a class="resource" href="../plugin/docs/single-run-vs-parallel-runtime.md">Single run vs parallel runtime<span>Explains the local single-Codex loop and future true parallel runtime options.</span></a>
           <a class="resource" href="../plugin/docs/qc-record-schema.md">QC record schema<span>Detailed file contracts for phase runs, tests, deviations, decisions, and gates.</span></a>
           <a class="resource" href="../MASTER.md">Project master file<span>Canonical project map, role contracts, version policy, and promotion checklist.</span></a>
         </div>

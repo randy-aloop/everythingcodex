@@ -1,8 +1,8 @@
 # Phase Loop
 
-Version: V02
-Updated: 2026-06-23
-Supersedes: V01
+Version: V03.1
+Updated: 2026-06-25
+Supersedes: V03
 
 Builder Team QC mimics the useful part of ADK workflow routing: deterministic phase gates with recorded state.
 
@@ -19,7 +19,7 @@ Run order:
 3. Builder role
 4. Persist `changed-files.json` and `implementation-diff.patch`
 5. Ponytail check
-6. Test role with at least one required non-skipped passing check
+6. Test role with at least one required test whose status is `pass`
 7. Reviewer role
 8. Compliance role
 9. Integration seam audit
@@ -48,19 +48,21 @@ Strict gate blocks when:
 - a required role verdict is missing, duplicated, unknown, `pending`, `revise`, or `block`
 - Ponytail is missing or not `pass`
 - no test result exists
-- all required tests are `skipped`
+- no required test has status `pass`
+- a required test is `skipped`
 - any recorded test is `fail`
 - a blocker issue is open in `.qc/issue-register.jsonl`
 - a blocker deviation lacks accepted-risk proof
 - release is required and `release-gate.md` is pending or `not_applicable`
 - the safety scan finds a blocker
 
-Current helper gaps:
+Helper status:
 
-- `record_test_result.py` does not yet support `--required` or `--attempt`; record those fields in `test-report.md` until the helper is hardened.
-- `record_deviation.py` does not yet support `--attempt`, `--issue-id`, or `--decision-id`; add them manually for gate-relevant deviations.
-- `record_decision.py` and `record_gate_decision.py` are target helpers, not current scripts.
-- `validate_phase_record.py` currently returns `0` for success and `1` for any error. Target exit codes are `0`, `10`, `20`, and `30`; classify the observed result in `gate-summary.md` until implemented.
+- `record_test_result.py` supports `--required` and `--attempt`; use those flags so strict validation can read machine-readable test policy evidence.
+- `record_deviation.py` supports `--attempt`, `--issue-id`, and `--decision-id`; use those flags for gate-relevant deviations.
+- `record_decision.py` and `record_gate_decision.py` are current scripts and should be used instead of hand-editing decision or phase-board state.
+- `validate_phase_record.py` returns classified exit codes: `0` pass, `10` strict-gate failure, `20` schema/config/invocation error, and `30` safety blocker.
+- Remaining helper gap: `changed-files.json` and `implementation-diff.patch` still require controller-generated evidence before Ponytail runs.
 
 Revise loop:
 

@@ -1,7 +1,8 @@
 # Single-Run Multiagent Vs Parallel Runtime
 
-Version: V02
+Version: V03
 Updated: 2026-06-24
+Supersedes: V02
 
 This note explains why Builder Team QC currently uses a single-run multiagent model, and what changes when the builder team becomes a true parallel runtime.
 
@@ -46,7 +47,7 @@ Reasons:
 - A human can inspect the conversation and the `.qc/` records in the same order the work happened.
 - The strict gate can fail fast without reconciling conflicting worker results.
 
-Single-run also fits the current helper reality. Some V02 target helpers are still planned, including `record_decision.py`, `record_gate_decision.py`, richer validator exit codes, and stronger evidence/diff recording. Until those are implemented, parallel workers would multiply ambiguity instead of reducing it.
+Single-run also fits the current helper reality. The `0.2.0-trial` hardening pass added `record_decision.py`, `record_gate_decision.py`, richer validator exit codes, and stronger evidence/diff recording, but these surfaces still need a real local build trial before parallel workers should multiply the number of writers.
 
 ## What Parallel Runtime Means
 

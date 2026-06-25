@@ -12,6 +12,9 @@ def main() -> int:
     parser.add_argument("--expected", required=True)
     parser.add_argument("--actual", required=True)
     parser.add_argument("--severity", required=True, choices=["low", "medium", "high", "blocker"])
+    parser.add_argument("--attempt", type=int, default=1)
+    parser.add_argument("--issue-id", default="")
+    parser.add_argument("--decision-id", default="")
     parser.add_argument("--resolution", default="")
     parser.add_argument("--accepted-by-user", action="store_true")
     args = parser.parse_args()
@@ -24,6 +27,9 @@ def main() -> int:
             "expected": args.expected,
             "actual": args.actual,
             "severity": args.severity,
+            "attempt": args.attempt,
+            "issue_id": args.issue_id,
+            "decision_id": args.decision_id,
             "resolution": args.resolution,
             "accepted_by_user": bool(args.accepted_by_user),
         },

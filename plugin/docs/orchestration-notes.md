@@ -1,8 +1,8 @@
 # Orchestration Notes
 
-Version: V02
-Updated: 2026-06-23
-Supersedes: V01
+Version: V03.1
+Updated: 2026-06-25
+Supersedes: V03
 
 These notes describe how `builder-team-qc` should run a builder-teams multiagent Ponytail phase.
 
@@ -265,11 +265,13 @@ python scripts\record_test_result.py `
   --name syntax `
   --command "<command run>" `
   --status pass `
+  --attempt 1 `
+  --required `
   --exit-code 0 `
   --notes "Syntax check passed"
 ```
 
-Confirmed current helper gap: `record_test_result.py` does not yet support `--required` or `--attempt`. Until it does, mark required status and attempt number in `test-report.md`. Strict gate policy still requires at least one required non-skipped passing check.
+Confirmed current behavior: `record_test_result.py` supports `--required` and `--attempt`; use those flags for phase-required checks so strict validation can read machine-readable test policy evidence.
 
 Recommended test ladder:
 
@@ -282,7 +284,7 @@ Docker smoke when runtime packaging changes
 stress check only when required by phase risk
 ```
 
-Strict gate requires at least one required non-skipped passing check. A phase with only `skipped` checks is blocked unless the user explicitly accepts the risk in `.qc/decision-log.jsonl`.
+Strict gate requires at least one required test with status `pass`. A required test marked `skipped` blocks strict validation. `accepted_with_risk` is a separate final gate decision recorded in `.qc/decision-log.jsonl` and `.qc/gate-events.jsonl`, not a validator-level exemption for skipped required tests.
 
 ### 6. Apply Reviewer Role
 
@@ -319,10 +321,13 @@ python scripts\record_deviation.py `
   --expected "<planned requirement>" `
   --actual "<what happened>" `
   --severity blocker `
+  --attempt 1 `
+  --issue-id "<issue id when applicable>" `
+  --decision-id "<decision id when accepted_with_risk>" `
   --resolution "<fix, mitigation, or pending state>"
 ```
 
-Confirmed current helper gap: `record_deviation.py` does not yet support `--attempt`, `--issue-id`, or `--decision-id`. Add those fields manually for gate-relevant deviations until helper support exists.
+Confirmed current behavior: `record_deviation.py` supports `--attempt`, `--issue-id`, and `--decision-id`; use those flags for gate-relevant deviations so accepted-risk proof can be linked deterministically.
 
 ### 8. Apply Integration Seam Role
 
@@ -360,7 +365,7 @@ The release role writes `release-gate.md` and should verify:
 - Docker/container health is inspectable when applicable.
 - No production-only behavior is hidden from local validation.
 
-When `release_required=true`, strict validation must run in release-aware mode. With the current validator, that means adding `--release-phase`. A release/runtime phase cannot pass with `release-gate.md` still pending or `Verdict: not_applicable`.
+When `release_required=true`, strict validation runs in release-aware mode. The current validator auto-detects release phases from phase board state, phase id/title, and configured release patterns; `--release-phase` remains available as an explicit override. A release/runtime phase cannot pass with `release-gate.md` still pending or `Verdict: not_applicable`.
 
 When `release_required=false`, `release-gate.md` may use `Verdict: not_applicable` only with a concrete `Not Applicable Rationale`, `Checked By`, and `Checked At`. Copy the rationale to `phase-board.json` as `release_not_applicable_rationale`.
 
@@ -407,7 +412,8 @@ Strict gate fails when:
 - Ponytail evidence is missing or not pass.
 - Test results are missing.
 - A recorded test failed.
-- Required tests are only skipped.
+- No required test has status `pass`.
+- A required test is skipped.
 - A blocker issue remains open in `.qc/issue-register.jsonl`.
 - An unaccepted blocker deviation exists.
 - An accepted-risk claim lacks a matching `.qc/decision-log.jsonl` human decision with impact, owner, deadline, rollback, and follow-up.
@@ -427,7 +433,7 @@ Confirmed current validator behavior: `validate_phase_record.py` returns `0` for
 
 `accepted_with_risk` is a gate bypass. The controller must not self-approve it. The decision record should include `decision_id`, `phase_id`, `accepted_by`, `risk`, `impact`, `reason`, `owner`, `deadline`, `rollback`, and `follow_up`.
 
-Target helper: `record_decision.py`. Confirmed current gap: this helper does not exist yet. Until it exists, the controller must manually append `.qc/decision-log.jsonl` and cite the decision id in `gate-summary.md`.
+Helper: `record_decision.py`. Confirmed current behavior: this helper appends `.qc/decision-log.jsonl` and prints or emits the decision id for cross-reference in `gate-summary.md`.
 
 ## Final Gate State Update
 
@@ -456,7 +462,7 @@ Minimum final fields:
 
 If the gate is `block`, set `current_phase_status` to `blocked`, keep `latest_gate_decision=block`, and list the blocker ids or summaries in `blocking_issues`.
 
-Target helper: `record_gate_decision.py`. Confirmed current gap: this helper does not exist yet. Until it exists, the controller must manually update `.qc/phase-board.json` and write `.qc/phase-runs/<phase-id>/gate-summary.md`.
+Helper: `record_gate_decision.py`. Confirmed current behavior: this helper updates `.qc/phase-board.json`, appends `.qc/gate-events.jsonl`, updates the phase record gate/status fields, and writes `.qc/phase-runs/<phase-id>/gate-summary.md`.
 
 ## Revise Loop
 

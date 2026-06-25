@@ -2,7 +2,7 @@
 
 Builder Team QC helps make Codex builds easier to trust.
 
-It is a local, phase-controlled multi-agent prototype built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools. Codex can move fast, but fast builds need traceability. Without a clear process, it can be difficult to know what changed, what was installed, what was tested, and why a decision was made.
+It is a local, phase-controlled multi-agent trial package built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools. Codex can move fast, but fast builds need traceability. Without a clear process, it can be difficult to know what changed, what was installed, what was tested, and why a decision was made.
 
 Builder Team QC solves that by breaking a build into auditable phases. Each phase uses role skills, script tools, Ponytail minimal-code checks, and .qc evidence records to track scoped changes, tests, reviews, compliance checks, seam audits, release gates, and strict validation.
 
@@ -14,7 +14,7 @@ Visual site: [https://randy-aloop.github.io/everythingcodex/builder-team-qc/](ht
 
 | Field | Value |
 | --- | --- |
-| Version | `0.1.0-prototype` |
+| Version | `0.2.1-trial` |
 | Package type | Codex plugin/process |
 | Runtime mode | Local-only V01 |
 | Primary controller | `phase-controller` |
@@ -152,7 +152,7 @@ Detailed note: [`plugin/docs/single-run-vs-parallel-runtime.md`](plugin/docs/sin
 | Required role files are present and no verdict remains pending | `validate_phase_record.py --strict-gate` | Role content quality still requires human/Codex judgment. |
 | Architecture fit, maintainability, self-review quality | Not fully deterministic in V01 | Reviewer and compliance reports; executable checks should be preferred when available. |
 
-The latest docs define the stricter target contract: non-pass role verdicts, all-skipped required tests, missing release gates, and accepted-risk claims without decision-log proof must block. Some helper scripts are still planned to make every part of that contract deterministic.
+The `0.2.1-trial` package ships the stricter helper set plus the V03.1 sync-to-code patch: non-pass role verdicts, all-skipped required tests, missing release gates, open blocker issues, and accepted-risk claims without decision-log proof must block. The package includes builder-scope audit, decision recording, gate-decision recording, Ponytail evidence binding, installed-copy validation, V03.1 doc-header checks, executed patch-record checks, and recovery-pack validation. The remaining proof gap is a real product build trial outside sandbox targets.
 
 ## Shared State: `.qc`
 
@@ -270,8 +270,9 @@ $TargetRoot = "<target-project>"
 $BuildPlan = "$TargetRoot\build-plan.md"
 
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File "$PluginRoot\scripts\install-builder-team-qc.ps1" `
+  -File "$PluginRoot\scripts\install-builder-team-qc-0.2.1-trial.ps1" `
   -TargetRoot $TargetRoot `
+  -FreshInstall `
   -StartPhase `
   -PhaseId phase-000 `
   -PhaseTitle 'Intake And Phase Selection' `
@@ -286,8 +287,9 @@ Run the same command without `-DryRun`:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File "$PluginRoot\scripts\install-builder-team-qc.ps1" `
+  -File "$PluginRoot\scripts\install-builder-team-qc-0.2.1-trial.ps1" `
   -TargetRoot $TargetRoot `
+  -FreshInstall `
   -StartPhase `
   -PhaseId phase-000 `
   -PhaseTitle 'Intake And Phase Selection' `
@@ -301,7 +303,7 @@ The installer creates or updates:
 | --- | --- |
 | `$TargetRoot\.codex\plugins\builder-team-qc\` | Project-local plugin copy. |
 | `$TargetRoot\.qc\` | Evidence records, phase board, logs, and templates. |
-| `$TargetRoot\.qc\phases\phase-000\` | First phase record when `-StartPhase` is used. |
+| `$TargetRoot\.qc\phase-runs\phase-000\` | First phase record when `-StartPhase` is used. |
 
 This is still a project-local plugin/process package. It is not a guaranteed global Codex auto-load. A future global plugin install or registry-loading step can make that smoother, but V01 keeps the install local and explicit.
 
@@ -362,7 +364,7 @@ Run the latest phase-by-phase controller plan:
 - run builder-agent
 - run Ponytail before test/review fan-out
 - run tests, reviewer, compliance, seam audit, and release gate when required
-- run strict validation, using --release-phase when release_required=true
+- run strict validation, using release auto-detection or --release-phase as an explicit override
 - cap revise loop at three failed attempts
 - require decision-log proof for accepted_with_risk
 - update phase-board final gate state before allowing the next phase
@@ -372,7 +374,9 @@ Command-level scripts:
 
 | Script | Purpose |
 | --- | --- |
-| `install-builder-team-qc.ps1` | Clone-friendly PowerShell installer for project-local plugin copy, `.qc` initialization, and optional first phase start. |
+| `install-builder-team-qc-0.2.1-trial.ps1` | Current trial wrapper for prototype/trial upgrades and explicit fresh installs; preserves existing `.qc` records by default and validates the V03.1 patch evidence. |
+| `install-builder-team-qc-0.2.0-trial.ps1` | Older trial wrapper retained for intentional installs of the previous package version. |
+| `install-builder-team-qc.ps1` | Canonical PowerShell installer for project-local plugin copy, expected-version checks, `.qc` initialization, installed-copy validation, and optional first phase start. |
 | `init_qc.py` | Create project-local `.qc` structure. |
 | `start_phase.py` | Open or resume a phase run. |
 | `record_ponytail_check.py` | Record minimal-code gate evidence. |
@@ -440,13 +444,8 @@ Current V01 boundaries:
 
 ## Current Implementation Note
 
-The latest documentation defines the desired deterministic contract. Two helper scripts are still planned for a stronger implementation:
-
-- `record_decision.py` for decision-log and accepted-risk records
-- `record_gate_decision.py` for final phase-board transitions
-
-Until those exist, the controller must write those records manually and disclose that manual step in the phase report.
+The latest package implements the decision and final gate helper scripts. `record_decision.py` records decision-log and accepted-risk evidence, and `record_gate_decision.py` records final phase-board transitions. The current installer validates those helper paths and the V03.1 patch evidence before accepting the package.
 
 ## Version
 
-Current project version: `0.1.0-prototype`
+Current project version: `0.2.1-trial`

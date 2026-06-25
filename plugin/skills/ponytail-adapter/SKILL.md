@@ -27,3 +27,13 @@ Use the smallest correct implementation:
 YAGNI -> stdlib -> native platform -> already-installed dependency -> one-liner -> minimum new code.
 
 Record evidence with `scripts/record_ponytail_check.py`.
+
+The event must identify the current attempt and bind the pass to the exact builder evidence:
+
+- `.qc/phase-runs/<phase-id>/changed-files.json`
+- `.qc/phase-runs/<phase-id>/implementation-diff.patch`
+- `.qc/phase-runs/<phase-id>/evidence/builder-scope-audit.json`
+
+Use structured subcheck status fields. A `minimum_code_verdict=pass` is valid only when YAGNI, stdlib/native/existing-dependency, dependency, and abstraction statuses are all `pass`.
+
+For upstream Ponytail hooks, record `upstream_hook_enabled=true`, `upstream_hook_review_id`, and the upstream version. Do not enable upstream hooks without explicit review and approval.

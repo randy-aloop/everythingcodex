@@ -1,5 +1,10 @@
 # Agent Dry Run And Test Report
 
+Version: V02
+Updated: 2026-06-24
+Supersedes: V01 report from 2026-06-23
+Status: `0.2.0-trial` stress addendum added
+
 This report compiles the agent dry runs, stress tests, self-correction checks, and Ponytail gate proof for `builder-team-qc`.
 
 The focus of this report is agent behavior, not installation packaging.
@@ -10,8 +15,13 @@ The focus of this report is agent behavior, not installation packaging.
 Multiagent phase loop: pass
 Builder-agent dry run: pass
 Builder-agent stress test: pass
+0.2.0-trial agent stress harness: pass
 Builder scope audit gate: pass
 Ponytail gate enforcement: pass
+Ponytail hash-bound evidence: pass
+Decision helper proof: pass
+Gate-decision helper proof: pass
+Release auto-detection gate: pass
 Stop/debug/log/correct workflow: pass as Codex-controller workflow
 Interactive stop-and-ask inside scripts: not built into scripts
 ```
@@ -22,29 +32,84 @@ Interactive stop-and-ask inside scripts: not built into scripts
 | --- | --- | --- |
 | `phase-controller` | phase selection, `.qc` init, phase start, strict gate, phase-board final state | Pass |
 | `builder-agent` | smallest phase change, overbuild detection, dependency drift, doc-only drift | Pass |
-| `ponytail-adapter` | latest Ponytail verdict must be `pass` | Pass |
-| `test-agent` | phase test recording and missing-test failure | Pass |
-| `reviewer-agent` | reviewer report must leave pending state before strict gate | Pass via completed role evidence |
+| `ponytail-adapter` | latest Ponytail verdict must be `pass`; stale changed-file/diff binding blocks | Pass |
+| `test-agent` | phase test recording, missing-test failure, required skipped-test failure | Pass |
+| `reviewer-agent` | reviewer report must leave pending state; `Verdict: revise` blocks strict gate | Pass |
 | `compliance-agent` | deviation/safety evidence, no unresolved blockers | Pass |
 | `integration-agent` | seam audit role evidence and next-phase handoff | Pass via completed role evidence |
-| `release-agent` | release gate not-applicable handling for non-release phases | Pass for non-release scope |
+| `release-agent` | release gate not-applicable handling and release-phase auto-detection | Pass |
 
 Note:
 
-- V01 executes role passes sequentially under Codex control. The "agents" are role contracts and evidence outputs, not independently launched remote agents.
+- V01 and V02 execute role passes sequentially under Codex control. The "agents" are role contracts and evidence outputs, not independently launched remote agents.
+
+## 0.2.0-Trial Agent Stress Addendum
+
+Fable5 run:
+
+```text
+<redacted-local-fable5-run>
+```
+
+Target root:
+
+```text
+<redacted-local-installer-test-target>
+```
+
+Summary:
+
+```text
+Cases executed: 10
+Cases passed: 10
+Cases failed: 0
+```
+
+Stress cases:
+
+| Case | Result |
+| --- | --- |
+| `template_validation` | Pass |
+| `baseline_pass_and_gate_board_transition` | Pass |
+| `role_verdict_revise_blocks_then_passes` | Pass |
+| `skipped_required_test_blocks_then_passes` | Pass |
+| `ponytail_revise_blocks_then_passes` | Pass |
+| `ponytail_stale_diff_blocks_then_passes` | Pass |
+| `builder_scope_overbuild_blocks_then_passes` | Pass |
+| `open_blocker_issue_blocks_then_passes` | Pass |
+| `accepted_risk_requires_decision_then_records_gate` | Pass |
+| `release_phase_auto_detect_blocks_until_release_gate_passes` | Pass |
+
+What this added over V01:
+
+- `record_decision.py` behavior is now proved for accepted-risk decision-log evidence.
+- `record_gate_decision.py` behavior is now proved for terminal phase-board transitions and `gate-summary.md` output.
+- Strict role verdict parsing is now proved with a negative `Verdict: revise` control.
+- Required skipped-test blocking is now proved.
+- Ponytail changed-files and implementation-diff hash binding is now proved with a stale-diff negative control.
+- Builder scope overbuild blocking is now proved through the installed `0.2.0-trial` script path.
+- Open issue-register blocker enforcement is now proved.
+- Release-phase auto-detection is now proved.
+
+Boundary:
+
+- This is a synthetic local sandbox stress run.
+- It does not prove a real product build.
+- It does not prove true concurrent autonomous agents.
+- It does not prove global Codex plugin registry install/load.
 
 ## Dry Run 1 - Full Multiagent Phase Loop
 
 Sandbox root:
 
 ```text
-<local-sandbox>/builder-team-qc-full-loop-stress-20260623-202433
+<local-sandbox>/builder-team-qc-full-loop-stress-<redacted-run-id>
 ```
 
 Capture:
 
 ```text
-<local-sandbox>/builder-team-qc-full-loop-stress-20260623-202433/FULL-DRY-RUN-STRESS-CAPTURE.md
+<local-sandbox>/builder-team-qc-full-loop-stress-<redacted-run-id>/FULL-DRY-RUN-STRESS-CAPTURE.md
 ```
 
 Summary:
@@ -81,13 +146,13 @@ Stress cases:
 Sandbox root:
 
 ```text
-<local-sandbox>/builder-agent-current-dryrun-stress-20260623-205357
+<local-sandbox>/builder-agent-current-dryrun-stress-<redacted-run-id>
 ```
 
 Capture:
 
 ```text
-<local-sandbox>/builder-agent-current-dryrun-stress-20260623-205357/BUILDER-AGENT-CURRENT-DRYRUN-STRESS-CAPTURE.md
+<local-sandbox>/builder-agent-current-dryrun-stress-<redacted-run-id>/BUILDER-AGENT-CURRENT-DRYRUN-STRESS-CAPTURE.md
 ```
 
 Summary:
@@ -137,13 +202,13 @@ Stop/debug/log/correct evidence:
 Sandbox root:
 
 ```text
-<local-sandbox>/builder-scope-native-test-20260623-204519
+<local-sandbox>/builder-scope-native-test-<redacted-run-id>
 ```
 
 Capture:
 
 ```text
-<local-sandbox>/builder-scope-native-test-20260623-204519/BUILDER-SCOPE-NATIVE-TEST-CAPTURE.md
+<local-sandbox>/builder-scope-native-test-<redacted-run-id>/BUILDER-SCOPE-NATIVE-TEST-CAPTURE.md
 ```
 
 Final gate:
@@ -169,13 +234,13 @@ What this proved:
 Sandbox root:
 
 ```text
-<local-sandbox>/ponytail-enforcement-proof-20260623-222802
+<local-sandbox>/ponytail-enforcement-proof-<redacted-run-id>
 ```
 
 Capture:
 
 ```text
-<local-sandbox>/ponytail-enforcement-proof-20260623-222802/PONYTAIL-ENFORCEMENT-PROOF.md
+<local-sandbox>/ponytail-enforcement-proof-<redacted-run-id>/PONYTAIL-ENFORCEMENT-PROOF.md
 ```
 
 ### Negative Control
@@ -232,6 +297,11 @@ The tests prove the following behavior:
 8. Stop reports can document user-decision points.
 9. Corrected phases can rerun and pass.
 10. The phase board records final completion.
+11. Accepted-risk blocker deviations require decision-log proof.
+12. Role verdicts such as `revise` and `block` are strict-gate blockers.
+13. Required tests cannot all be skipped.
+14. Ponytail pass evidence must match the current changed-files and implementation-diff hashes.
+15. Release phases are detected and blocked until release-gate evidence passes.
 
 ## What The Agent Tests Do Not Prove Yet
 
@@ -241,11 +311,10 @@ The tests do not yet prove:
 - remote agent launch
 - Codex plugin registry install/load
 - interactive question prompts inside script-only mode
-- `record_decision.py` helper behavior
-- `record_gate_decision.py` helper behavior
 - automated changed-files/diff recording helper behavior
+- a real product build outside a synthetic sandbox
 
-Those are either intentionally out of V01 scope or still current helper gaps.
+Those are either intentionally out of V02 scope or still current helper gaps.
 
 ## Stop-And-Ask Status
 
@@ -270,25 +339,31 @@ When a stop report is written, Codex must ask the user before applying a correct
 Full-loop stress:
 
 ```text
-<local-sandbox>/builder-team-qc-full-loop-stress-20260623-202433/FULL-DRY-RUN-STRESS-CAPTURE.md
+<local-sandbox>/builder-team-qc-full-loop-stress-<redacted-run-id>/FULL-DRY-RUN-STRESS-CAPTURE.md
 ```
 
 Builder-agent stress:
 
 ```text
-<local-sandbox>/builder-agent-current-dryrun-stress-20260623-205357/BUILDER-AGENT-CURRENT-DRYRUN-STRESS-CAPTURE.md
+<local-sandbox>/builder-agent-current-dryrun-stress-<redacted-run-id>/BUILDER-AGENT-CURRENT-DRYRUN-STRESS-CAPTURE.md
 ```
 
 Builder scope proof:
 
 ```text
-<local-sandbox>/builder-scope-native-test-20260623-204519/BUILDER-SCOPE-NATIVE-TEST-CAPTURE.md
+<local-sandbox>/builder-scope-native-test-<redacted-run-id>/BUILDER-SCOPE-NATIVE-TEST-CAPTURE.md
 ```
 
 Ponytail proof:
 
 ```text
-<local-sandbox>/ponytail-enforcement-proof-20260623-222802/PONYTAIL-ENFORCEMENT-PROOF.md
+<local-sandbox>/ponytail-enforcement-proof-<redacted-run-id>/PONYTAIL-ENFORCEMENT-PROOF.md
+```
+
+0.2.0-trial agent stress:
+
+```text
+<redacted-local-stress-summary>
 ```
 
 ## Final Verdict
@@ -296,10 +371,16 @@ Ponytail proof:
 ```text
 Agent dry run: PASS
 Agent stress test: PASS
+0.2.0-trial stress harness: PASS
 Builder-agent scope control: PASS
 Ponytail gate proof: PASS
+Ponytail stale-binding control: PASS
+Decision helper proof: PASS
+Gate-decision helper proof: PASS
+Release auto-detection gate: PASS
 Self-correction proof: PASS
 Logging proof: PASS
 Script-level interactive ask: NOT IMPLEMENTED
 Codex-controller stop-and-ask workflow: PROVEN BY STOP REPORTS
+Real product build trial: NOT YET PROVEN
 ```

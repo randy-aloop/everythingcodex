@@ -13,6 +13,8 @@ def main() -> int:
     parser.add_argument("--name", required=True)
     parser.add_argument("--command", required=True)
     parser.add_argument("--status", required=True, choices=["pass", "fail", "skipped"])
+    parser.add_argument("--attempt", type=int, default=1)
+    parser.add_argument("--required", action="store_true")
     parser.add_argument("--exit-code", type=int, default=None)
     parser.add_argument("--output-file", default="")
     parser.add_argument("--notes", default="")
@@ -25,6 +27,8 @@ def main() -> int:
         "name": args.name,
         "command": args.command,
         "status": args.status,
+        "attempt": args.attempt,
+        "required": bool(args.required),
         "exit_code": args.exit_code,
         "output_file": args.output_file,
         "notes": args.notes,

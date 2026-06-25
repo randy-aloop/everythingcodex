@@ -1,12 +1,21 @@
 {
   "schema_version": "1.0",
   "current_phase_id": "",
+  "current_phase_title": "",
   "current_phase_status": "not_started",
   "next_phase_id": "",
-  "latest_gate_decision": "",
+  "latest_gate_decision": "pending",
+  "latest_gate_at": "",
+  "last_gate_at": "",
+  "release_required": false,
+  "release_not_applicable_rationale": "",
+  "revise_attempts": 0,
+  "max_revise_attempts": 3,
   "required_evidence": [
     "phase-record.md",
     "builder-notes.md",
+    "changed-files.json",
+    "implementation-diff.patch",
     "reviewer-report.md",
     "test-report.md",
     "compliance-report.md",
@@ -14,5 +23,7 @@
     "release-gate.md",
     "ponytail-events.jsonl"
   ],
-  "blocking_issues": []
+  "blocking_issues": [],
+  "accepted_risk_decision_id": "",
+  "updated_at": ""
 }
