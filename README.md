@@ -117,6 +117,24 @@ flowchart TD
 
 V01 uses logical fan-out, not true concurrent agents. Codex applies role passes sequentially unless a future runtime adds real concurrency.
 
+### Strict Gate Logic
+
+The amber `validate --strict-gate` step is where the hard pass/fail logic lives. It is a single all-must-hold gate: if any required condition fails, the validator exits non-zero.
+
+![Builder Team QC strict gate logic](plugin/docs/assets/builder-team-qc-strict-gate.png)
+
+The highlighted required-test rule is the `0.2.1-trial` hardening change: at least one required test must pass, and required tests cannot be skipped.
+
+Exit-code precedence:
+
+| Exit | Meaning | Checked |
+| --- | --- | --- |
+| `20` | Schema/config/invocation error | First |
+| `30` | Safety blocker from `--scan-safety` | Second |
+| `10` | Strict gate condition failed | Third |
+
+If more than one class of failure exists, the validator returns the first applicable class: schema `20`, then safety `30`, then strict gate `10`.
+
 ## Codex Agent Types
 
 Builder Team QC mirrors the useful mental model from Google ADK while staying local.
