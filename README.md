@@ -6,7 +6,7 @@ Everything Codex is a public index for reusable Codex workflows, plugins, build-
 
 | Project | Status | Location | Description |
 | --- | --- | --- | --- |
-| [Builder Team QC](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) | `v0.1.0-prototype` | [`Codex-builder-team-multiagents`](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) branch | Phase-gated local multi-agent prototype for Codex that makes builds easier to trust by tracking scoped changes, tests, reviews, compliance checks, seam audits, release gates, and strict validation. |
+| [Builder Team QC](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) | `v0.2.1-trial` | [`Codex-builder-team-multiagents`](https://github.com/randy-aloop/everythingcodex/tree/Codex-builder-team-multiagents) branch | Phase-gated local multi-agent trial plugin for Codex with installable project-local QC records, stricter validation helpers, docs, scripts, role skills, seam audits, release gates, and rollback-ready evidence. |
 
 Visual site: [Builder Team QC](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
 

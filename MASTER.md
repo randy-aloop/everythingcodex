@@ -36,13 +36,13 @@ Visual site: [`https://randy-aloop.github.io/everythingcodex/builder-team-qc/`](
 
 Main pointer: `projects/builder-team-qc/README.md`
 
-Description: Builder Team QC is a local, phase-controlled multi-agent prototype for Codex that helps make builds easier to trust. It was built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools.
+Description: Builder Team QC is a local, phase-controlled multi-agent trial plugin for Codex that helps make builds easier to trust. It was built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools.
 
 The system breaks a build into auditable phases. Each phase uses role skills, script tools, Ponytail minimal-code checks, and `.qc` evidence records to track scoped changes, tests, reviews, compliance checks, seam audits, release gates, and strict validation.
 
-V01 is intentionally local-first. It runs as a single Codex-controlled workflow, not remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
+The current `0.2.1-trial` line is intentionally local-first. It installs into a target project, runs as a Codex-controlled workflow rather than remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
 
-Status: `v0.1.0-prototype`
+Status: `v0.2.1-trial`
 
 Primary files:
 

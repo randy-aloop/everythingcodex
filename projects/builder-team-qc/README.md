@@ -12,11 +12,11 @@ Visual site:
 
 Builder Team QC helps make Codex builds easier to trust.
 
-It is a local, phase-controlled multi-agent prototype built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools. Codex can move fast, but fast builds need traceability. Without a clear process, it can be difficult to know what changed, what was installed, what was tested, and why a decision was made.
+It is a local, phase-controlled multi-agent trial plugin built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools. Codex can move fast, but fast builds need traceability. Without a clear process, it can be difficult to know what changed, what was installed, what was tested, and why a decision was made.
 
 Builder Team QC solves that by breaking a build into auditable phases. Each phase uses role skills, script tools, Ponytail minimal-code checks, and `.qc` evidence records to track scoped changes, tests, reviews, compliance checks, seam audits, release gates, and strict validation.
 
-V01 is intentionally local-first. It runs as a single Codex-controlled workflow, not remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
+The current `0.2.1-trial` line is intentionally local-first. It installs into a target project, runs as a Codex-controlled workflow rather than remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
 
 ## Why This Pointer Exists
 
