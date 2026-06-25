@@ -66,6 +66,11 @@ In `builder-team-qc`, the phase is the unit of control. Each role sees the curre
 
 ## Architecture
 
+![Builder Team QC architecture](plugin/docs/assets/builder-team-qc-architecture.png)
+
+<details>
+<summary>Editable Mermaid source</summary>
+
 ```mermaid
 flowchart TD
     PLAN["Read build plan<br/>phase-controller - current phase"]:::neutral
@@ -107,6 +112,8 @@ flowchart TD
     classDef revise fill:#833518,stroke:#d67851,color:#ffd5c5
     classDef neutral fill:#3f403d,stroke:#aaa,color:#f3f3f3
 ```
+
+</details>
 
 V01 uses logical fan-out, not true concurrent agents. Codex applies role passes sequentially unless a future runtime adds real concurrency.
 
