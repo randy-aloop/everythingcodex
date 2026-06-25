@@ -6,7 +6,7 @@ It is a local, phase-controlled multi-agent trial package built from a real non-
 
 Builder Team QC solves that by breaking a build into auditable phases. Each phase uses role skills, script tools, Ponytail minimal-code checks, and .qc evidence records to track scoped changes, tests, reviews, compliance checks, seam audits, release gates, and strict validation.
 
-V01 is intentionally local-first. It runs as a single Codex-controlled workflow, not remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
+The current `0.2.1-trial` line is intentionally local-first. It installs into a target project, runs as a Codex-controlled workflow rather than remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
 
 Visual site: [https://randy-aloop.github.io/everythingcodex/builder-team-qc/](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
 
@@ -20,6 +20,33 @@ Visual site: [https://randy-aloop.github.io/everythingcodex/builder-team-qc/](ht
 | Primary controller | `phase-controller` |
 | Evidence store | Project-local `.qc/` folder |
 | Safety posture | No secrets, no remote services, no public tunnels by default |
+
+## Quick Install
+
+Use the project branch directly, then install into the target project that should receive `.qc/` records and a project-local plugin copy.
+
+```powershell
+git clone --branch Codex-builder-team-multiagents --single-branch `
+  https://github.com/randy-aloop/everythingcodex.git builder-team-qc
+
+cd builder-team-qc
+
+$PluginRoot = "$PWD\plugin"
+$TargetRoot = "<target-project>"
+$BuildPlan = "$TargetRoot\build-plan.md"
+
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File "$PluginRoot\scripts\install-builder-team-qc-0.2.1-trial.ps1" `
+  -TargetRoot $TargetRoot `
+  -FreshInstall `
+  -StartPhase `
+  -PhaseId phase-000 `
+  -PhaseTitle 'Intake And Phase Selection' `
+  -NextPhaseId phase-001 `
+  -BuildPlan $BuildPlan
+```
+
+For a no-write preview, add `-DryRun`. For the full walkthrough, see [`plugin/docs/installation-and-first-run-guide.md`](plugin/docs/installation-and-first-run-guide.md).
 
 ## Attribution
 
@@ -41,30 +68,44 @@ In `builder-team-qc`, the phase is the unit of control. Each role sees the curre
 
 ```mermaid
 flowchart TD
-    U["User request"] --> PC["phase-controller"]
-    PC --> PLAN["Read build plan"]
-    PLAN --> INIT["Initialize .qc"]
-    INIT --> START["Start phase record"]
-    START --> B["builder-agent"]
-    B --> PT["ponytail-adapter"]
-    PT --> PTV{"Ponytail pass?"}
-    PTV -- "no" --> REVISE["revise or block"]
-    REVISE --> B
-    PTV -- "yes" --> FAN["logical evidence fan-out"]
-    FAN --> TEST["test-agent"]
-    FAN --> REVIEW["reviewer-agent"]
-    FAN --> COMP["compliance-agent"]
-    FAN --> SEAM["integration-agent"]
-    FAN --> REL["release-agent when required"]
-    TEST --> JOIN["evidence join"]
-    REVIEW --> JOIN
-    COMP --> JOIN
-    SEAM --> JOIN
-    REL --> JOIN
-    JOIN --> VALIDATE["strict gate validation"]
-    VALIDATE --> GATE{"pass / revise / block / accepted_with_risk"}
-    GATE --> BOARD["update phase-board.json"]
-    BOARD --> USER["user-facing gate result"]
+    PLAN["Read build plan<br/>phase-controller - current phase"]:::neutral
+    INIT["Scaffold .qc<br/>init_qc.py - if absent"]:::controller
+    START["Open phase<br/>start_phase.py - board-guarded"]:::controller
+    SNAP["Snapshot scope baseline<br/>audit_builder_scope --snapshot"]:::controller
+    BUILD["builder-agent<br/>candidate -> builder-notes.md"]:::role
+    AUDIT["Audit scope vs baseline<br/>audit_builder_scope --audit"]:::controller
+    DIFF["Persist diff evidence<br/>changed-files.json + diff.patch"]:::controller
+    PONY["ponytail-adapter<br/>record_ponytail_check.py -> event"]:::role
+    POK{"Ponytail/scope ok?"}:::neutral
+    REVISE1["revise / block<br/>-> builder-agent"]:::revise
+
+    subgraph FAN["Evidence fan-out - sequential"]
+        TEST["test-agent<br/>-> test-report.md + results"]:::role
+        REVIEW["reviewer-agent<br/>-> reviewer-report.md"]:::role
+        COMP["compliance-agent<br/>-> compliance-report.md"]:::role
+        INTEG["integration-agent<br/>-> seam-audit.md"]:::role
+        RELEASE["release-agent<br/>-> release-gate.md if release"]:::role
+        TEST --> REVIEW --> COMP --> INTEG --> RELEASE
+    end
+
+    EARLY["Validate in-progress<br/>non-strict early signal"]:::controller
+    STRICT["Validate --strict-gate<br/>exit 0 / 10 / 20 / 30"]:::strict
+    GATE["Controller gate decision<br/>pass - revise - block - accept-risk"]:::neutral
+    REVISE2["revise / block<br/>-> new attempt"]:::revise
+    RECORD["record_gate_decision.py<br/>board + summary - revise x3 -> block"]:::controller
+    NEXT["Next phase<br/>board-guarded, else --force"]:::neutral
+
+    PLAN --> INIT --> START --> SNAP --> BUILD --> AUDIT --> DIFF --> PONY --> POK
+    POK -- "no" --> REVISE1 --> BUILD
+    POK -- "yes" --> FAN --> EARLY --> STRICT --> GATE
+    GATE --> RECORD --> NEXT
+    GATE --> REVISE2
+
+    classDef controller fill:#075f4d,stroke:#2fbf9b,color:#d8fff4
+    classDef role fill:#433991,stroke:#8275ff,color:#f1efff
+    classDef strict fill:#744400,stroke:#d18a00,color:#ffe0a3
+    classDef revise fill:#833518,stroke:#d67851,color:#ffd5c5
+    classDef neutral fill:#3f403d,stroke:#aaa,color:#f3f3f3
 ```
 
 V01 uses logical fan-out, not true concurrent agents. Codex applies role passes sequentially unless a future runtime adds real concurrency.
@@ -421,7 +462,7 @@ Current V01 boundaries:
 
 - Role passes are sequential under Codex control, not true concurrent remote agents.
 - Script-level interactive prompts are not implemented.
-- `record_decision.py`, `record_gate_decision.py`, and automated changed-files/diff helpers remain planned strengthening work.
+- `record_decision.py` and `record_gate_decision.py` are implemented. Builder changed-files/diff evidence is still written by the controller and does not yet have a dedicated recorder helper.
 
 ## Project Files
 
