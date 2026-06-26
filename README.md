@@ -213,9 +213,16 @@ Detailed note: [`plugin/docs/single-run-vs-parallel-runtime.md`](plugin/docs/sin
 
 | Gate condition | Checked by script | Judged by role review |
 | --- | --- | --- |
-| Ponytail event exists and latest verdict is `pass` | `validate_phase_record.py` | Reviewer may assess whether the recorded rationale is credible. |
-| Test evidence exists and no recorded test failed | `validate_phase_record.py` | Test role decides whether selected checks are meaningful. |
-| Required role files are present and no verdict remains pending | `validate_phase_record.py --strict-gate` | Role content quality still requires human/Codex judgment. |
+| Required phase files exist | `validate_phase_record.py` | Role content quality still requires human/Codex judgment. |
+| Required role verdicts are `pass` | `validate_phase_record.py --strict-gate` | Role content quality still requires human/Codex judgment. |
+| Phase record decision is not `revise` or `block` | `validate_phase_record.py` | Controller decides whether the written decision matches the real state. |
+| Ponytail event exists, latest verdict is `pass`, subchecks pass, and hashes are fresh | `validate_phase_record.py --strict-gate`; `record_ponytail_check.py` records evidence | Reviewer may assess whether the recorded rationale is credible. |
+| Test evidence exists, no recorded test failed, at least one required test passed, and required tests were not skipped | `validate_phase_record.py --strict-gate`; `record_test_result.py --required --attempt` records evidence | Test role decides whether selected checks are meaningful. |
+| Blocker deviations are accepted only with decision-log proof | `validate_phase_record.py`; `record_decision.py` records the decision | Human/user acceptance is required for real accepted risk. |
+| Open blocker issues stop the gate | `validate_phase_record.py` | Controller must confirm issue status reflects reality. |
+| Builder scope audit is present and passes when required | `audit_builder_scope.py`; `validate_phase_record.py --require-builder-scope` | Reviewer/compliance roles judge whether allowed changes are justified. |
+| Release phases require `release-gate.md` verdict `pass` | `validate_phase_record.py --release-phase` or auto release detection | Release role checks runtime, rollback, and deployment readiness. |
+| Safety scan blockers stop the gate with exit `30` | `validate_phase_record.py --scan-safety` | Compliance role reviews whether findings are real blockers. |
 | Architecture fit, maintainability, self-review quality | Not fully deterministic in V01 | Reviewer and compliance reports; executable checks should be preferred when available. |
 
 The `0.2.1-trial` package ships the stricter helper set plus the V03.1 sync-to-code patch: non-pass role verdicts, all-skipped required tests, missing release gates, open blocker issues, and accepted-risk claims without decision-log proof must block. The package includes builder-scope audit, decision recording, gate-decision recording, Ponytail evidence binding, installed-copy validation, V03.1 doc-header checks, executed patch-record checks, and recovery-pack validation. The remaining proof gap is a real product build trial outside sandbox targets.
@@ -228,10 +235,16 @@ Builder Team QC uses project-local files as durable shared state.
 | --- | --- |
 | `.qc/phase-board.json` | Current phase id, status, next phase, release requirement, revise attempt count, latest gate, and final gate timestamp. |
 | `.qc/phase-runs/<phase-id>/` | Phase record and role reports for builder, reviewer, test, compliance, seam, and release. |
-| `.qc/test-results/<phase-id>.jsonl` | Machine-readable test evidence with command, status, exit code, and notes. |
-| `.qc/ponytail-events.jsonl` | Ponytail mode, checks, and minimal-code verdict. |
-| `.qc/deviation-log.jsonl` | Scope changes, blockers, unresolved risk, and accepted-risk metadata. |
+| `.qc/phase-runs/<phase-id>/changed-files.json` | Machine-readable changed-file evidence for the builder candidate. |
+| `.qc/phase-runs/<phase-id>/implementation-diff.patch` | Diff evidence or equivalent patch summary for reviewer and compliance checks. |
+| `.qc/phase-runs/<phase-id>/evidence/builder-scope-audit.json` | Builder-scope audit result comparing post-build files against the pre-builder baseline. |
+| `.qc/phase-runs/<phase-id>/gate-summary.md` | Final gate result, validator outcome, phase-board transition, and closeout note. |
+| `.qc/test-results/<phase-id>.jsonl` | Machine-readable test evidence with command, status, exit code, attempt, required flag, output file, and notes. |
+| `.qc/ponytail-events.jsonl` | Ponytail mode, checks, minimal-code verdict, attempt, mode source, and binding hashes. |
+| `.qc/deviation-log.jsonl` | Scope changes, blockers, unresolved risk, issue ids, decision ids, and accepted-risk metadata. |
 | `.qc/decision-log.jsonl` | Human decisions, approvals, accepted-risk bypasses, and follow-up commitments. |
+| `.qc/issue-register.jsonl` | Open, resolved, accepted, and blocker issue records used by the strict gate. |
+| `.qc/gate-events.jsonl` | Final gate decisions recorded by `record_gate_decision.py`. |
 
 `accepted_with_risk` is a gate bypass, not a controller convenience. It requires an explicit human decision recorded in `decision-log.jsonl`; the controller must not self-approve incomplete evidence.
 
@@ -393,6 +406,7 @@ Useful options:
 | `-SkipProjectPluginCopy` | Initialize `.qc/` without copying the plugin package. |
 | `-SkipQcInit` | Copy the plugin package without initializing `.qc/`. |
 | `-ForceTemplates` | Overwrite existing copied template files. |
+| `-WriteInstallReport` | Write installed package metadata to `.codex\plugins\builder-team-qc\install-report.json`. |
 | `-PhaseId`, `-PhaseTitle`, `-NextPhaseId` | Start a specific phase record. |
 
 ### Manual Fallback
@@ -445,9 +459,12 @@ Command-level scripts:
 | `install-builder-team-qc.ps1` | Canonical PowerShell installer for project-local plugin copy, expected-version checks, `.qc` initialization, installed-copy validation, and optional first phase start. |
 | `init_qc.py` | Create project-local `.qc` structure. |
 | `start_phase.py` | Open or resume a phase run. |
+| `audit_builder_scope.py` | Snapshot pre-builder file scope and audit post-builder changes. |
 | `record_ponytail_check.py` | Record minimal-code gate evidence. |
 | `record_test_result.py` | Record machine-readable test evidence. |
 | `record_deviation.py` | Record build-plan or safety deviations. |
+| `record_decision.py` | Record human approvals, accepted-risk decisions, rollback, owner, deadline, and follow-up commitments. |
+| `record_gate_decision.py` | Record final gate transitions, update `phase-board.json`, append `gate-events.jsonl`, and write `gate-summary.md`. |
 | `validate_phase_record.py` | Validate phase evidence and strict gate state. |
 | `summarize_phase.py` | Summarize current phase records. |
 
