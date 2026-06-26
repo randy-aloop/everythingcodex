@@ -181,31 +181,6 @@ Builder Team QC mirrors the useful mental model from Google ADK while staying lo
 | Workflow agent | `phase-controller` | Controls sequence, fan-out, revise loop, and final gate decision. |
 | Custom logic | Local scripts under `plugin/scripts/` | Create `.qc`, start phase records, record events, validate gates, and summarize phase state. |
 
-## Role Model
-
-```mermaid
-flowchart TD
-    PC["phase-controller<br/>root controller"]
-    PC --> B["builder-agent<br/>candidate change"]
-    PC --> P["ponytail-adapter<br/>minimal-code gate"]
-    PC --> T["test-agent<br/>runnable proof"]
-    PC --> R["reviewer-agent<br/>architecture fit"]
-    PC --> C["compliance-agent<br/>plan and safety"]
-    PC --> I["integration-agent<br/>phase seams"]
-    PC --> RL["release-agent<br/>runtime readiness"]
-```
-
-| Role | Purpose |
-| --- | --- |
-| `phase-controller` | Opens phase records, routes role checks, validates evidence, and decides gates. |
-| `builder-agent` | Implements only the smallest correct current-phase change. |
-| `ponytail-adapter` | Applies minimal-code discipline and records the Ponytail verdict. |
-| `test-agent` | Runs quick checks and records runnable proof. |
-| `reviewer-agent` | Checks architecture fit, minimal code, and implementation quality. |
-| `compliance-agent` | Verifies plan adherence, approvals, protected zones, and no-secrets behavior. |
-| `integration-agent` | Audits previous/current/next phase seams. |
-| `release-agent` | Checks production debug, runtime, Docker, rollback, and readiness evidence. |
-
 ## Orchestration Pattern
 
 ```text
