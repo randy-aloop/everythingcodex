@@ -160,6 +160,62 @@ flowchart TD
 
 Runtime V01 uses logical fan-out, not true concurrent agents. Codex applies role passes sequentially unless a future runtime adds real concurrency.
 
+### Orchestration Pattern
+
+At a high level, the architecture is a controlled handoff: the controller opens the phase, role agents produce evidence, script tools record or validate that evidence, and the controller makes the gate decision.
+
+```text
+plan
+  -> start phase
+  -> builder-agent
+  -> Ponytail gate
+  -> test / review / compliance / seam / release evidence
+  -> strict validation
+  -> pass / revise / block / accepted_with_risk
+  -> phase-board final state
+```
+
+| Pattern | Builder Team QC behavior |
+| --- | --- |
+| Sequential | Plan, initialize `.qc`, start phase, build candidate, run Ponytail, validate. |
+| Parallel-style | Test, review, compliance, seam, and release checks are independent evidence branches, but Runtime V01 runs them sequentially. |
+| Loop | Revise loop is capped at three failed attempts before block or human accepted-risk decision. |
+
+The hard stop is the deterministic validator: `validate_phase_record.py --strict-gate` must exit cleanly for evidence completion. Model-authored role reports are useful review evidence, but executable checks and validator exit codes carry more weight.
+
+### Codex Agent Types
+
+Builder Team QC mirrors the useful mental model from Google ADK while staying local.
+
+| Concept | Builder Team QC equivalent | Responsibility |
+| --- | --- | --- |
+| Reasoning agent | `builder-agent`, `reviewer-agent`, role skills | Read the phase context, reason through the current role, and write evidence. |
+| Workflow agent | `phase-controller` | Controls sequence, fan-out, revise loop, and final gate decision. |
+| Custom logic | Local scripts under `plugin/scripts/` | Create `.qc`, start phase records, record events, validate gates, and summarize phase state. |
+
+### Role Skill Vs Script Tool
+
+| Feature | Role skill | Script tool |
+| --- | --- | --- |
+| Example | `reviewer-agent` | `record_test_result.py` |
+| Who stays in control? | `phase-controller` | `phase-controller` |
+| What it does | Applies a reasoning contract and writes a report. | Performs a precise record or validation action. |
+| Can it advance the phase? | No. It produces evidence. | No. It records or checks evidence. |
+
+Keeping this boundary clear prevents helper code from taking over the phase.
+
+### Ponytail Gate
+
+Ponytail is a phase-scope minimal-code discipline gate, not a test-agent helper. It checks whether the builder output obeys:
+
+- YAGNI
+- standard library first
+- native platform or existing project tooling before new dependencies
+- no unnecessary abstraction
+- smallest correct implementation
+
+If Ponytail passes, evidence checks fan out. If it revises or blocks, the controller should stop or loop back before spending time on deeper validation.
+
 ### Role Architecture And Shared State
 
 The role architecture explains who owns each part of a phase. The controller is the only decider: role output is evidence, not authority. A role can recommend pass, revise, block, or risk acceptance, but `phase-controller` reads the evidence, runs the validator, records the gate decision, and decides whether the phase may move forward.
@@ -252,60 +308,6 @@ Builder Team QC uses project-local files as durable shared state.
 | `.qc/gate-events.jsonl` | Final gate decisions recorded by `record_gate_decision.py`. |
 
 `accepted_with_risk` is a gate bypass, not a controller convenience. It requires an explicit human decision recorded in `decision-log.jsonl`; the controller must not self-approve incomplete evidence.
-
-## Ponytail Gate
-
-Ponytail is a phase-scope minimal-code discipline gate, not a test-agent helper. It checks whether the builder output obeys:
-
-- YAGNI
-- standard library first
-- native platform or existing project tooling before new dependencies
-- no unnecessary abstraction
-- smallest correct implementation
-
-If Ponytail passes, evidence checks fan out. If it revises or blocks, the controller should stop or loop back before spending time on deeper validation.
-
-## Role Skill Vs Script Tool
-
-| Feature | Role skill | Script tool |
-| --- | --- | --- |
-| Example | `reviewer-agent` | `record_test_result.py` |
-| Who stays in control? | `phase-controller` | `phase-controller` |
-| What it does | Applies a reasoning contract and writes a report. | Performs a precise record or validation action. |
-| Can it advance the phase? | No. It produces evidence. | No. It records or checks evidence. |
-
-Keeping this boundary clear prevents helper code from taking over the phase.
-
-## Codex Agent Types
-
-Builder Team QC mirrors the useful mental model from Google ADK while staying local.
-
-| Concept | Builder Team QC equivalent | Responsibility |
-| --- | --- | --- |
-| Reasoning agent | `builder-agent`, `reviewer-agent`, role skills | Read the phase context, reason through the current role, and write evidence. |
-| Workflow agent | `phase-controller` | Controls sequence, fan-out, revise loop, and final gate decision. |
-| Custom logic | Local scripts under `plugin/scripts/` | Create `.qc`, start phase records, record events, validate gates, and summarize phase state. |
-
-## Orchestration Pattern
-
-```text
-plan
-  -> start phase
-  -> builder-agent
-  -> Ponytail gate
-  -> test / review / compliance / seam / release evidence
-  -> strict validation
-  -> pass / revise / block / accepted_with_risk
-  -> phase-board final state
-```
-
-| Pattern | Builder Team QC behavior |
-| --- | --- |
-| Sequential | Plan, initialize `.qc`, start phase, build candidate, run Ponytail, validate. |
-| Parallel-style | Test, review, compliance, seam, and release checks are independent evidence branches, but Runtime V01 runs them sequentially. |
-| Loop | Revise loop is capped at three failed attempts before block or human accepted-risk decision. |
-
-The hard stop is the deterministic validator: `validate_phase_record.py --strict-gate` must exit cleanly for evidence completion. Model-authored role reports are useful review evidence, but executable checks and validator exit codes carry more weight.
 
 ## Single-Run Vs Parallel Runtime
 
