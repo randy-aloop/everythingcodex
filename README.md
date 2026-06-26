@@ -117,6 +117,42 @@ flowchart TD
 
 V01 uses logical fan-out, not true concurrent agents. Codex applies role passes sequentially unless a future runtime adds real concurrency.
 
+### Role Architecture And Shared State
+
+The role architecture explains who owns each part of a phase. The controller is the only decider: role output is evidence, not authority. A role can recommend pass, revise, block, or risk acceptance, but `phase-controller` reads the evidence, runs the validator, records the gate decision, and decides whether the phase may move forward.
+
+![Builder Team QC role architecture](plugin/docs/assets/builder-team-qc-role-architecture.svg)
+
+| Role | Responsibility | Primary evidence |
+| --- | --- | --- |
+| `phase-controller` | Opens or resumes the phase, routes role work, runs validation, and records the final gate. | `.qc/phase-board.json`, `phase-record.md`, `gate-summary.md`, `gate-events.jsonl` |
+| `builder-agent` | Makes the smallest correct candidate change for the current phase. | `builder-notes.md`, `changed-files.json`, `implementation-diff.patch` |
+| `ponytail-adapter` | Applies minimal-code discipline before deeper review effort begins. | `ponytail-events.jsonl` plus binding hashes |
+| `test-agent` | Runs or records runnable proof. | `test-report.md`, `test-results/<phase-id>.jsonl` |
+| `reviewer-agent` | Checks implementation quality, maintainability, and architectural fit. | `reviewer-report.md` |
+| `compliance-agent` | Checks plan adherence, protected zones, safety defaults, and record completeness. | `compliance-report.md` |
+| `integration-agent` | Checks previous/current/next phase seams. | `seam-audit.md` |
+| `release-agent` | Checks runtime, Docker, rollback, logs, and release readiness when release evidence is required. | `release-gate.md` |
+
+Every role reads from and writes back to `.qc`. This keeps the system local and sequential while still giving it a multi-agent shape: each role has a stable contract, but there is no hidden remote worker and no true parallel runtime in V01.
+
+### Revise Loop And Attempt Counter
+
+The revise loop explains how failure returns to the builder without letting the phase drift forever. The validator can reject a phase, but `record_gate_decision.py` turns the controller's decision into durable board state.
+
+Each `revise` decision sets `next = attempts + 1`. Once `next >= max_revise` (default `3`), the helper auto-converts the gate to `block` and exits `10`. A `pass` or `accepted_with_risk` resets the counter to `0`.
+
+![Builder Team QC revise loop](plugin/docs/assets/builder-team-qc-revise-loop.svg)
+
+| Gate | Terminal? | Attempt counter | Next behavior |
+| --- | --- | --- | --- |
+| `pass` | Yes | Reset to `0` | Next phase is allowed. |
+| `accepted_with_risk` | Yes | Reset to `0` | Next phase is allowed only when a matching decision-log record exists. |
+| `revise` | No | Increment by `1` | Controller loops to a new builder attempt; next phase remains blocked. |
+| `block` | Yes, failed | Preserved at failure point | Controller stops; user or build owner must re-scope, accept risk, or reopen intentionally. |
+
+The board status from the decision drives `start_phase`: `revise` is non-terminal and loops, `pass` and `accepted_with_risk` are terminal-success states, and `block` is terminal-failed. This is why role evidence does not move the phase by itself; only the controller's recorded gate decision changes phase state.
+
 ### Strict Gate Logic
 
 The amber `validate --strict-gate` step is where the hard pass/fail logic lives. It is a single all-must-hold gate: if any required condition fails, the validator exits non-zero.
