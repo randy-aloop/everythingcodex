@@ -178,7 +178,6 @@ plan
 | Pattern | Builder Team QC behavior |
 | --- | --- |
 | Sequential | Plan, initialize `.qc`, start phase, build candidate, run Ponytail, validate. |
-| Parallel-style | Test, review, compliance, seam, and release checks are independent evidence branches, but Runtime V01 runs them sequentially. |
 | Loop | Revise loop is capped at three failed attempts before block or human accepted-risk decision. |
 
 The hard stop is the deterministic validator: `validate_phase_record.py --strict-gate` must exit cleanly for evidence completion. Model-authored role reports are useful review evidence, but executable checks and validator exit codes carry more weight.
@@ -203,18 +202,6 @@ Builder Team QC mirrors the useful mental model from Google ADK while staying lo
 | Can it advance the phase? | No. It produces evidence. | No. It records or checks evidence. |
 
 Keeping this boundary clear prevents helper code from taking over the phase.
-
-### Ponytail Gate
-
-Ponytail is a phase-scope minimal-code discipline gate, not a test-agent helper. It checks whether the builder output obeys:
-
-- YAGNI
-- standard library first
-- native platform or existing project tooling before new dependencies
-- no unnecessary abstraction
-- smallest correct implementation
-
-If Ponytail passes, evidence checks fan out. If it revises or blocks, the controller should stop or loop back before spending time on deeper validation.
 
 ### Role Architecture And Shared State
 
