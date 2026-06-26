@@ -14,6 +14,18 @@ Builder Team QC solves that by breaking a build into auditable phases. Each phas
 
 The current `0.2.1-trial` line is intentionally local-first. It installs into a target project, runs as a Codex-controlled workflow rather than remote autonomous agents, and avoids public tunnels, remote services, and hidden API access by default.
 
+## Prepare A Build Plan
+
+Before installing Builder Team QC, do one simple thing: write the build plan by phase.
+
+The build plan is the source of truth Codex will follow. It does not need to be complicated or overly technical. Just split the work into clear phases so Codex knows what to build first, what to check, and when the project is ready to move to the next step.
+
+This is what makes Builder Team QC useful: instead of asking Codex to work from one big loose idea, you give it a simple phase-by-phase path that can be tracked, reviewed, and validated.
+
+Use this guide when preparing your build plan:
+
+[plugin/docs/build-plan-authoring-guide.md](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/plugin/docs/build-plan-authoring-guide.md)
+
 Visual site: [https://randy-aloop.github.io/everythingcodex/builder-team-qc/](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
 
 ## Project Status
@@ -327,14 +339,6 @@ Builder Team QC is local-first by default:
 - no remote Docker daemon by default
 - no public tunnel or exposed server port by default
 - no global install requirement for Runtime V01
-
-## Build Plan Authoring
-
-Before using Builder Team QC, write the build plan as phase contracts, not as a broad idea document. Each phase should tell the builder team what files may change, what behavior must exist, what proof must be recorded, when to stop, and what the next phase can rely on.
-
-Use this guide when preparing a project for the builder team:
-
-[`plugin/docs/build-plan-authoring-guide.md`](plugin/docs/build-plan-authoring-guide.md)
 
 ## Installer Options
 
