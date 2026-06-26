@@ -388,28 +388,7 @@ python plugin\scripts\validate_phase_record.py `
   --template-only
 ```
 
-## Run Workflow Prompt
-
-Use this prompt from Codex in a target project:
-
-```text
-Use builder-team-qc for this build.
-Target root: <project path>
-Build plan: <plan path>
-Current phase: <phase id and title>
-Run the latest phase-by-phase controller plan:
-- initialize or verify .qc
-- start/resume the phase
-- run builder-agent
-- run Ponytail before test/review fan-out
-- run tests, reviewer, compliance, seam audit, and release gate when required
-- run strict validation, using release auto-detection or --release-phase as an explicit override
-- cap revise loop at three failed attempts
-- require decision-log proof for accepted_with_risk
-- update phase-board final gate state before allowing the next phase
-```
-
-### Command-Level Scripts
+## Command-Level Scripts
 
 | Script | Purpose |
 | --- | --- |
