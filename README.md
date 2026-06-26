@@ -1,5 +1,11 @@
 # Builder Team QC: Phase-Gated Multi-Agent Workflow For Codex
 
+![Version](https://img.shields.io/badge/version-0.2.1--trial-blue)
+![Runtime](https://img.shields.io/badge/runtime-local--only%20V01-green)
+![Platform](https://img.shields.io/badge/platform-Windows%20PowerShell-5391FE)
+![Safety](https://img.shields.io/badge/safety-no%20secrets%20by%20default-brightgreen)
+![Gate](https://img.shields.io/badge/gate-strict%20exit%200%2F10%2F20%2F30-orange)
+
 Builder Team QC helps make Codex builds easier to trust.
 
 It is a local, phase-controlled multi-agent trial package built from a real non-coder workflow: turning scattered ideas, requirements, app notes, and rough specs into working tools. Codex can move fast, but fast builds need traceability. Without a clear process, it can be difficult to know what changed, what was installed, what was tested, and why a decision was made.
@@ -10,47 +16,92 @@ The current `0.2.1-trial` line is intentionally local-first. It installs into a 
 
 Visual site: [https://randy-aloop.github.io/everythingcodex/builder-team-qc/](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
 
+## What You Get
+
+- phase-gated Codex builds instead of one long unstructured chat
+- local `.qc` evidence for scope, tests, reviews, decisions, and gates
+- strict validator exits: `0` pass, `10` gate failure, `20` schema/config error, `30` safety blocker
+- bounded revise loop with a default three-attempt cap
+- no API keys, remote services, public tunnels, or global Codex install requirement by default
+
 ## Project Status
 
 | Field | Value |
 | --- | --- |
 | Version | `0.2.1-trial` |
 | Package type | Codex plugin/process |
-| Runtime mode | Local-only V01 |
+| Runtime mode | Local-only Runtime V01 |
 | Primary controller | `phase-controller` |
 | Evidence store | Project-local `.qc/` folder |
 | Safety posture | No secrets, no remote services, no public tunnels by default |
 
-## Quick Install
+Runtime V01 means local sequential execution by one Codex-controlled workflow; the package version is `0.2.1-trial`.
 
-Use the project branch directly, then install into the target project that should receive `.qc/` records and a project-local plugin copy.
+Current limits: role passes are sequential, script-level interactive prompts are not implemented, and builder changed-files/diff evidence is still written by the controller rather than a dedicated recorder helper.
+
+Implementation note: the current package includes `record_decision.py`, `record_gate_decision.py`, installed-copy validation, and V03.1 patch-evidence checks before accepting the package.
+
+## Try In 3 Minutes
+
+This 30-second demo path previews the install, creates local `.qc` evidence, inspects it, and gives Codex the first phase prompt. The dry run is no-write by design; inspect `.qc` after the real install step.
 
 ```powershell
+# 1. Clone the source branch.
 git clone --branch Codex-builder-team-multiagents --single-branch `
   https://github.com/randy-aloop/everythingcodex.git builder-team-qc
 
 cd builder-team-qc
 
+# 2. Point at a target project and an existing build plan.
 $PluginRoot = "$PWD\plugin"
 $TargetRoot = "<target-project>"
 $BuildPlan = "$TargetRoot\build-plan.md"
+$Python = "python"
 
+# Create build-plan.md first. See plugin/docs/build-plan-authoring-guide.md.
+# If python is not on PATH, set $Python to "py" or a full python.exe path.
+
+# 3. Preview the install without writing files.
 powershell -NoProfile -ExecutionPolicy Bypass `
   -File "$PluginRoot\scripts\install-builder-team-qc-0.2.1-trial.ps1" `
   -TargetRoot $TargetRoot `
+  -Python $Python `
   -FreshInstall `
   -StartPhase `
   -PhaseId phase-000 `
   -PhaseTitle 'Intake And Phase Selection' `
   -NextPhaseId phase-001 `
-  -BuildPlan $BuildPlan
+  -BuildPlan $BuildPlan `
+  -DryRun
+
+# 4. Install, then inspect .qc.
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File "$PluginRoot\scripts\install-builder-team-qc-0.2.1-trial.ps1" `
+  -TargetRoot $TargetRoot `
+  -Python $Python `
+  -FreshInstall `
+  -StartPhase `
+  -PhaseId phase-000 `
+  -PhaseTitle 'Intake And Phase Selection' `
+  -NextPhaseId phase-001 `
+  -BuildPlan $BuildPlan `
+  -WriteInstallReport
+
+Get-ChildItem -Force "$TargetRoot\.qc"
+Get-Content "$TargetRoot\.qc\phase-board.json"
 ```
 
-For a no-write preview, add `-DryRun`. For the full walkthrough, see [`plugin/docs/installation-and-first-run-guide.md`](plugin/docs/installation-and-first-run-guide.md).
+Then start Codex in the target project and prompt:
 
-## Attribution
+```text
+Use builder-team-qc for this build.
+Target root: <target-project>
+Build plan: <target-project>\build-plan.md
+Current phase: phase-000 Intake And Phase Selection
+Run the phase-controller workflow.
+```
 
-Ponytail credit: the Builder Team QC `ponytail-adapter` credits [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail), the MIT-licensed Ponytail project by Dietrich Gebert. Builder Team QC does not vendor or run upstream Ponytail by default; V01 uses a local instruction/checklist adapter unless upstream hooks are explicitly reviewed, enabled, and recorded.
+Full walkthrough: [`plugin/docs/installation-and-first-run-guide.md`](plugin/docs/installation-and-first-run-guide.md).
 
 ## What Is A Builder-Team Multi-Agent System?
 
@@ -60,7 +111,7 @@ In `builder-team-qc`, the phase is the unit of control. Each role sees the curre
 
 | Principle | Meaning |
 | --- | --- |
-| Local control | Codex stays in the loop. No hidden server, remote A2A surface, public tunnel, or automatic global install is required for V01. |
+| Local control | Codex stays in the loop. No hidden server, remote A2A surface, public tunnel, or automatic global install is required for Runtime V01. |
 | Role clarity | Builder, reviewer, test, compliance, integration, release, and Ponytail roles each produce evidence instead of blending into one chat narrative. |
 | Durable proof | The `.qc/` folder records phase runs, tests, deviations, decisions, seam audits, Ponytail checks, and gate outcomes. |
 
@@ -115,7 +166,7 @@ flowchart TD
 
 </details>
 
-V01 uses logical fan-out, not true concurrent agents. Codex applies role passes sequentially unless a future runtime adds real concurrency.
+Runtime V01 uses logical fan-out, not true concurrent agents. Codex applies role passes sequentially unless a future runtime adds real concurrency.
 
 ### Role Architecture And Shared State
 
@@ -134,7 +185,7 @@ The role architecture explains who owns each part of a phase. The controller is 
 | `integration-agent` | Checks previous/current/next phase seams. | `seam-audit.md` |
 | `release-agent` | Checks runtime, Docker, rollback, logs, and release readiness when release evidence is required. | `release-gate.md` |
 
-Every role reads from and writes back to `.qc`. This keeps the system local and sequential while still giving it a multi-agent shape: each role has a stable contract, but there is no hidden remote worker and no true parallel runtime in V01.
+Every role reads from and writes back to `.qc`. This keeps the system local and sequential while still giving it a multi-agent shape: each role has a stable contract, but there is no hidden remote worker and no true parallel runtime in Runtime V01.
 
 ### Revise Loop And Attempt Counter
 
@@ -171,55 +222,6 @@ Exit-code precedence:
 
 If more than one class of failure exists, the validator returns the first applicable class: schema `20`, then safety `30`, then strict gate `10`.
 
-## Codex Agent Types
-
-Builder Team QC mirrors the useful mental model from Google ADK while staying local.
-
-| Concept | Builder Team QC equivalent | Responsibility |
-| --- | --- | --- |
-| Reasoning agent | `builder-agent`, `reviewer-agent`, role skills | Read the phase context, reason through the current role, and write evidence. |
-| Workflow agent | `phase-controller` | Controls sequence, fan-out, revise loop, and final gate decision. |
-| Custom logic | Local scripts under `plugin/scripts/` | Create `.qc`, start phase records, record events, validate gates, and summarize phase state. |
-
-## Orchestration Pattern
-
-```text
-plan
-  -> start phase
-  -> builder-agent
-  -> Ponytail gate
-  -> test / review / compliance / seam / release evidence
-  -> strict validation
-  -> pass / revise / block / accepted_with_risk
-  -> phase-board final state
-```
-
-| Pattern | Builder Team QC behavior |
-| --- | --- |
-| Sequential | Plan, initialize `.qc`, start phase, build candidate, run Ponytail, validate. |
-| Parallel-style | Test, review, compliance, seam, and release checks are independent evidence branches, but V01 runs them sequentially. |
-| Loop | Revise loop is capped at three failed attempts before block or human accepted-risk decision. |
-
-The hard stop is the deterministic validator: `validate_phase_record.py --strict-gate` must exit cleanly for evidence completion. Model-authored role reports are useful review evidence, but executable checks and validator exit codes carry more weight.
-
-## Single-Run Vs Parallel Runtime
-
-Builder Team QC Runtime V01 is **single-run multiagent**: one Codex runtime performs the builder-team roles one at a time. It is multiagent by role contract, not by process. Runtime V01 is not a live Google ADK runtime; it borrows ADK-style orchestration vocabulary while keeping execution local, visible, and file-auditable.
-
-The target is still parallel-friendly:
-
-```text
-sequential build
-parallel evidence checks
-sequential strict gate
-```
-
-The builder and Ponytail stages should remain sequential because they create and scope the candidate change. Test, review, compliance, integration, and release checks can become parallel evidence workers later, after the strict gate, evidence schema, file locking, attempt ids, candidate/diff ids, and deterministic join rules are strong enough.
-
-ADK alignment: `SequentialAgent` maps to ordered build control, `ParallelAgent` maps to concurrent evidence checks with explicit shared-state coordination, and `LoopAgent` maps to the bounded revise loop. For a future ADK 2.0+ implementation, graph or dynamic workflows should also be considered before committing to template workflow agents.
-
-Detailed note: [`plugin/docs/single-run-vs-parallel-runtime.md`](plugin/docs/single-run-vs-parallel-runtime.md)
-
 ## What Is Enforced By Code?
 
 | Gate condition | Checked by script | Judged by role review |
@@ -234,7 +236,7 @@ Detailed note: [`plugin/docs/single-run-vs-parallel-runtime.md`](plugin/docs/sin
 | Builder scope audit is present and passes when required | `audit_builder_scope.py`; `validate_phase_record.py --require-builder-scope` | Reviewer/compliance roles judge whether allowed changes are justified. |
 | Release phases require `release-gate.md` verdict `pass` | `validate_phase_record.py --release-phase` or auto release detection | Release role checks runtime, rollback, and deployment readiness. |
 | Safety scan blockers stop the gate with exit `30` | `validate_phase_record.py --scan-safety` | Compliance role reviews whether findings are real blockers. |
-| Architecture fit, maintainability, self-review quality | Not fully deterministic in V01 | Reviewer and compliance reports; executable checks should be preferred when available. |
+| Architecture fit, maintainability, self-review quality | Not fully deterministic in Runtime V01 | Reviewer and compliance reports; executable checks should be preferred when available. |
 
 The `0.2.1-trial` package ships the stricter helper set plus the V03.1 sync-to-code patch: non-pass role verdicts, all-skipped required tests, missing release gates, open blocker issues, and accepted-risk claims without decision-log proof must block. The package includes builder-scope audit, decision recording, gate-decision recording, Ponytail evidence binding, installed-copy validation, V03.1 doc-header checks, executed patch-record checks, and recovery-pack validation. The remaining proof gap is a real product build trial outside sandbox targets.
 
@@ -282,6 +284,55 @@ If Ponytail passes, evidence checks fan out. If it revises or blocks, the contro
 
 Keeping this boundary clear prevents helper code from taking over the phase.
 
+## Codex Agent Types
+
+Builder Team QC mirrors the useful mental model from Google ADK while staying local.
+
+| Concept | Builder Team QC equivalent | Responsibility |
+| --- | --- | --- |
+| Reasoning agent | `builder-agent`, `reviewer-agent`, role skills | Read the phase context, reason through the current role, and write evidence. |
+| Workflow agent | `phase-controller` | Controls sequence, fan-out, revise loop, and final gate decision. |
+| Custom logic | Local scripts under `plugin/scripts/` | Create `.qc`, start phase records, record events, validate gates, and summarize phase state. |
+
+## Orchestration Pattern
+
+```text
+plan
+  -> start phase
+  -> builder-agent
+  -> Ponytail gate
+  -> test / review / compliance / seam / release evidence
+  -> strict validation
+  -> pass / revise / block / accepted_with_risk
+  -> phase-board final state
+```
+
+| Pattern | Builder Team QC behavior |
+| --- | --- |
+| Sequential | Plan, initialize `.qc`, start phase, build candidate, run Ponytail, validate. |
+| Parallel-style | Test, review, compliance, seam, and release checks are independent evidence branches, but Runtime V01 runs them sequentially. |
+| Loop | Revise loop is capped at three failed attempts before block or human accepted-risk decision. |
+
+The hard stop is the deterministic validator: `validate_phase_record.py --strict-gate` must exit cleanly for evidence completion. Model-authored role reports are useful review evidence, but executable checks and validator exit codes carry more weight.
+
+## Single-Run Vs Parallel Runtime
+
+Builder Team QC Runtime V01 is **single-run multiagent**: one Codex runtime performs the builder-team roles one at a time. It is multiagent by role contract, not by process. Runtime V01 is not a live Google ADK runtime; it borrows ADK-style orchestration vocabulary while keeping execution local, visible, and file-auditable.
+
+The target is still parallel-friendly:
+
+```text
+sequential build
+parallel evidence checks
+sequential strict gate
+```
+
+The builder and Ponytail stages should remain sequential because they create and scope the candidate change. Test, review, compliance, integration, and release checks can become parallel evidence workers later, after the strict gate, evidence schema, file locking, attempt ids, candidate/diff ids, and deterministic join rules are strong enough.
+
+ADK alignment: `SequentialAgent` maps to ordered build control, `ParallelAgent` maps to concurrent evidence checks with explicit shared-state coordination, and `LoopAgent` maps to the bounded revise loop. For a future ADK 2.0+ implementation, graph or dynamic workflows should also be considered before committing to template workflow agents.
+
+Detailed note: [`plugin/docs/single-run-vs-parallel-runtime.md`](plugin/docs/single-run-vs-parallel-runtime.md)
+
 ## Phase-By-Phase Run Plan
 
 The detailed latest runbook is here:
@@ -296,7 +347,7 @@ One-page run order:
 2. start_phase.py
 3. builder-agent creates candidate
 4. ponytail-adapter gates scope/minimal-code
-5. evidence fan-out, sequential in V01
+5. evidence fan-out, sequential in Runtime V01
    5A. test-agent
    5B. reviewer-agent
    5C. compliance-agent
@@ -323,7 +374,7 @@ Builder Team QC is local-first by default:
 - no remote MCP/A2A/OpenAPI surfaces by default
 - no remote Docker daemon by default
 - no public tunnel or exposed server port by default
-- no global install requirement for V01
+- no global install requirement for Runtime V01
 
 ## Build Plan Authoring
 
@@ -333,59 +384,11 @@ Use this guide when preparing a project for the builder team:
 
 [`plugin/docs/build-plan-authoring-guide.md`](plugin/docs/build-plan-authoring-guide.md)
 
-## Installation
+## Full Installation Options
 
-Use the project branch directly. This installs from a local clone of the branch; it does not download remote scripts at runtime, store secrets, open public ports, or perform a global Codex install.
+The fastest path is the [`Try In 3 Minutes`](#try-in-3-minutes) flow above. Use this section when you need installer options, manual fallback, or a reminder of what gets written.
 
-Requirements: Git, PowerShell, and Python 3. If `python` is not available on your Windows PATH, pass `-Python py` or `-Python "<python-exe>"` to the installer.
-
-### 1. Clone The Builder Team QC Branch
-
-```powershell
-git clone --branch Codex-builder-team-multiagents --single-branch `
-  https://github.com/randy-aloop/everythingcodex.git builder-team-qc
-
-cd builder-team-qc
-```
-
-Cloning the branch gives you the Builder Team QC source folder. Codex does not automatically pick up the plugin from the clone by itself.
-
-### 2. Run A Dry-Run Install
-
-Set the target project where `.qc/` and the project-local plugin copy should be created:
-
-```powershell
-$PluginRoot = "$PWD\plugin"
-$TargetRoot = "<target-project>"
-$BuildPlan = "$TargetRoot\build-plan.md"
-
-powershell -NoProfile -ExecutionPolicy Bypass `
-  -File "$PluginRoot\scripts\install-builder-team-qc-0.2.1-trial.ps1" `
-  -TargetRoot $TargetRoot `
-  -FreshInstall `
-  -StartPhase `
-  -PhaseId phase-000 `
-  -PhaseTitle 'Intake And Phase Selection' `
-  -NextPhaseId phase-001 `
-  -BuildPlan $BuildPlan `
-  -DryRun
-```
-
-### 3. Install Into The Target Project
-
-Run the same command without `-DryRun`:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass `
-  -File "$PluginRoot\scripts\install-builder-team-qc-0.2.1-trial.ps1" `
-  -TargetRoot $TargetRoot `
-  -FreshInstall `
-  -StartPhase `
-  -PhaseId phase-000 `
-  -PhaseTitle 'Intake And Phase Selection' `
-  -NextPhaseId phase-001 `
-  -BuildPlan $BuildPlan
-```
+Use the project branch directly. This installs from a local clone of the branch; it does not download remote scripts at runtime, store secrets, open public ports, or perform a global Codex install. Requirements: Git, PowerShell, and Python 3. If `python` is not available on your Windows PATH, pass `-Python py` or `-Python "<python-exe>"` to the installer.
 
 The installer creates or updates:
 
@@ -395,18 +398,7 @@ The installer creates or updates:
 | `$TargetRoot\.qc\` | Evidence records, phase board, logs, and templates. |
 | `$TargetRoot\.qc\phase-runs\phase-000\` | First phase record when `-StartPhase` is used. |
 
-This is still a project-local plugin/process package. It is not a guaranteed global Codex auto-load. A future global plugin install or registry-loading step can make that smoother, but V01 keeps the install local and explicit.
-
-### 4. Tell Codex To Use It
-
-After install, start Codex in the target project and ask for the workflow explicitly:
-
-```text
-Use builder-team-qc for this build.
-Target root: <target-project>
-Build plan: <build-plan-path>
-Run the phase-controller workflow.
-```
+This is still a project-local plugin/process package. It is not a guaranteed global Codex auto-load. A future global plugin install or registry-loading step can make that smoother, but Runtime V01 keeps the install local and explicit.
 
 Useful options:
 
@@ -422,7 +414,7 @@ Useful options:
 
 ### Manual Fallback
 
-If PowerShell script execution is restricted, use the Python helpers directly from the clone:
+If PowerShell script execution is restricted, use the Python helpers directly from the clone after setting `$TargetRoot` and `$BuildPlan`:
 
 ```powershell
 python plugin\scripts\init_qc.py --root $TargetRoot
@@ -440,7 +432,7 @@ python plugin\scripts\validate_phase_record.py `
   --template-only
 ```
 
-## Quick Start
+## Run Workflow Prompt
 
 Use this prompt from Codex in a target project:
 
@@ -461,7 +453,7 @@ Run the latest phase-by-phase controller plan:
 - update phase-board final gate state before allowing the next phase
 ```
 
-Command-level scripts:
+### Command-Level Scripts
 
 | Script | Purpose |
 | --- | --- |
@@ -511,7 +503,7 @@ What the tests prove:
 - Safety blockers stop the gate while non-blocking policy/reference findings can remain warnings.
 - Corrected phases can rerun and pass, with deviations and stop reports recorded.
 
-Current V01 boundaries:
+Current Runtime V01 boundaries:
 
 - Role passes are sequential under Codex control, not true concurrent remote agents.
 - Script-level interactive prompts are not implemented.
@@ -536,9 +528,9 @@ Current V01 boundaries:
 | [`STRUCTURE.md`](STRUCTURE.md) | Folder contract. |
 | [`CHANGELOG.md`](CHANGELOG.md) | Change history. |
 
-## Current Implementation Note
+## Credits
 
-The latest package implements the decision and final gate helper scripts. `record_decision.py` records decision-log and accepted-risk evidence, and `record_gate_decision.py` records final phase-board transitions. The current installer validates those helper paths and the V03.1 patch evidence before accepting the package.
+Ponytail credit: the Builder Team QC `ponytail-adapter` credits [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail), the MIT-licensed Ponytail project by Dietrich Gebert. Builder Team QC does not vendor or run upstream Ponytail by default; Runtime V01 uses a local instruction/checklist adapter unless upstream hooks are explicitly reviewed, enabled, and recorded.
 
 ## Version
 
