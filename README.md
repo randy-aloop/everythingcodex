@@ -325,35 +325,6 @@ ADK alignment: `SequentialAgent` maps to ordered build control, `ParallelAgent` 
 
 Detailed note: [`plugin/docs/single-run-vs-parallel-runtime.md`](plugin/docs/single-run-vs-parallel-runtime.md)
 
-## Phase-By-Phase Run Plan
-
-The detailed latest runbook is here:
-
-[plugin/docs/phase-by-phase-run-plan.md](plugin/docs/phase-by-phase-run-plan.md)
-
-One-page run order:
-
-```text
-0. Intake and choose one phase
-1. init_qc.py
-2. start_phase.py
-3. builder-agent creates candidate
-4. ponytail-adapter gates scope/minimal-code
-5. evidence fan-out, sequential in Runtime V01
-   5A. test-agent
-   5B. reviewer-agent
-   5C. compliance-agent
-   5D. integration-agent
-   5E. release-agent when release_required=true
-6. validate in progress
-7. validate strict gate
-8. revise loop, max 3 failed attempts
-9. accepted-risk path only with human decision-log proof
-10. update phase-board final state
-11. report gate result
-12. hand off next phase
-```
-
 ## Safety Defaults
 
 Builder Team QC is local-first by default:
