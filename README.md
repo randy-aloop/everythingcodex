@@ -1,5 +1,7 @@
 # Builder Team QC: Phase-Gated Multi-Agent Workflow For Codex
 
+Visual site: [https://randy-aloop.github.io/everythingcodex/builder-team-qc/](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
+
 ![Version](https://img.shields.io/badge/version-0.2.1--trial-blue)
 ![Runtime](https://img.shields.io/badge/runtime-local--only%20V01-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20PowerShell-5391FE)
@@ -25,8 +27,6 @@ This is what makes Builder Team QC useful: instead of asking Codex to work from 
 Use this guide when preparing your build plan:
 
 [plugin/docs/build-plan-authoring-guide.md](https://github.com/randy-aloop/everythingcodex/blob/Codex-builder-team-multiagents/plugin/docs/build-plan-authoring-guide.md)
-
-Visual site: [https://randy-aloop.github.io/everythingcodex/builder-team-qc/](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
 
 ## Project Status
 
