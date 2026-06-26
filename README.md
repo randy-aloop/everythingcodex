@@ -16,14 +16,6 @@ The current `0.2.1-trial` line is intentionally local-first. It installs into a 
 
 Visual site: [https://randy-aloop.github.io/everythingcodex/builder-team-qc/](https://randy-aloop.github.io/everythingcodex/builder-team-qc/)
 
-## What You Get
-
-- phase-gated Codex builds instead of one long unstructured chat
-- local `.qc` evidence for scope, tests, reviews, decisions, and gates
-- strict validator exits: `0` pass, `10` gate failure, `20` schema/config error, `30` safety blocker
-- bounded revise loop with a default three-attempt cap
-- no API keys, remote services, public tunnels, or global Codex install requirement by default
-
 ## Project Status
 
 | Field | Value |
@@ -41,9 +33,9 @@ Current limits: role passes are sequential, script-level interactive prompts are
 
 Implementation note: the current package includes `record_decision.py`, `record_gate_decision.py`, installed-copy validation, and V03.1 patch-evidence checks before accepting the package.
 
-## Try In 3 Minutes
+## Installation
 
-This 30-second demo path previews the install, creates local `.qc` evidence, inspects it, and gives Codex the first phase prompt. The dry run is no-write by design; inspect `.qc` after the real install step.
+Follow these steps to install Builder Team QC into a target project, create local `.qc` evidence, inspect the initialized state, and start the first phase from Codex. The dry run is no-write by design; inspect `.qc` after the real install step.
 
 ```powershell
 # 1. Clone the source branch.
@@ -384,9 +376,9 @@ Use this guide when preparing a project for the builder team:
 
 [`plugin/docs/build-plan-authoring-guide.md`](plugin/docs/build-plan-authoring-guide.md)
 
-## Full Installation Options
+## Installer Options
 
-The fastest path is the [`Try In 3 Minutes`](#try-in-3-minutes) flow above. Use this section when you need installer options, manual fallback, or a reminder of what gets written.
+The main install path is the [`Installation`](#installation) flow above. Use this section when you need installer options, manual fallback, or a reminder of what gets written.
 
 Use the project branch directly. This installs from a local clone of the branch; it does not download remote scripts at runtime, store secrets, open public ports, or perform a global Codex install. Requirements: Git, PowerShell, and Python 3. If `python` is not available on your Windows PATH, pass `-Python py` or `-Python "<python-exe>"` to the installer.
 
